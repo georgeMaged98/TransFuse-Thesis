@@ -1,1 +1,0 @@
-/usr/bin/c++ -g CMakeFiles/proof_of_failure.dir/main.cpp.o CMakeFiles/proof_of_failure.dir/src/file_mapper.cpp.o CMakeFiles/proof_of_failure.dir/src/mmap_manager.cpp.o -o proof_of_failure 
