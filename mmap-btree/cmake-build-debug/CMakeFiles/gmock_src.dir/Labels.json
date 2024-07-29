@@ -1,0 +1,43 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/CMakeFiles/gmock_src"
+		},
+		{
+			"file" : "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/CMakeFiles/gmock_src.rule"
+		},
+		{
+			"file" : "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/CMakeFiles/gmock_src-complete.rule"
+		},
+		{
+			"file" : "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gtm/src/gmock_src-stamp/gmock_src-build.rule"
+		},
+		{
+			"file" : "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gtm/src/gmock_src-stamp/gmock_src-configure.rule"
+		},
+		{
+			"file" : "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gtm/src/gmock_src-stamp/gmock_src-download.rule"
+		},
+		{
+			"file" : "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gtm/src/gmock_src-stamp/gmock_src-install.rule"
+		},
+		{
+			"file" : "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gtm/src/gmock_src-stamp/gmock_src-mkdir.rule"
+		},
+		{
+			"file" : "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gtm/src/gmock_src-stamp/gmock_src-patch.rule"
+		},
+		{
+			"file" : "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gtm/src/gmock_src-stamp/gmock_src-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"gmock_src"
+		],
+		"name" : "gmock_src"
+	}
+}

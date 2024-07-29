@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6"/>
+	<Project>
+		<Option title="proof_of_failure"/>
+		<Option makefile_is_custom="1"/>
+		<Option compiler="gcc"/>
+		<Option virtualFolders="CMake Files\;"/>
+		<Build>
+			<Target title="all">
+				<Option working_dir="/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/gmake -j8 -f &quot;/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/cmake-build-debug/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/gmake -j8 -f &quot;/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/gmake -j8 -f &quot;/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/gmake -j8 -f &quot;/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="proof_of_failure">
+				<Option output="/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/cmake-build-debug/proof_of_failure" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/include"/>
+					<Add directory="/usr/include/c++/13"/>
+					<Add directory="/usr/include/x86_64-linux-gnu/c++/13"/>
+					<Add directory="/usr/include/c++/13/backward"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/13/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/gmake -j8 -f &quot;/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/cmake-build-debug/Makefile&quot;  VERBOSE=1 proof_of_failure"/>
+					<CompileFile command="/usr/bin/gmake -j8 -f &quot;/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/gmake -j8 -f &quot;/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/gmake -j8 -f &quot;/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="proof_of_failure/fast">
+				<Option output="/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/cmake-build-debug/proof_of_failure" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/include"/>
+					<Add directory="/usr/include/c++/13"/>
+					<Add directory="/usr/include/x86_64-linux-gnu/c++/13"/>
+					<Add directory="/usr/include/c++/13/backward"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/13/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/gmake -j8 -f &quot;/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/cmake-build-debug/Makefile&quot;  VERBOSE=1 proof_of_failure/fast"/>
+					<CompileFile command="/usr/bin/gmake -j8 -f &quot;/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/gmake -j8 -f &quot;/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/gmake -j8 -f &quot;/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="edit_cache">
+				<Option working_dir="/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/gmake -j8 -f &quot;/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/cmake-build-debug/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="/usr/bin/gmake -j8 -f &quot;/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/gmake -j8 -f &quot;/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/gmake -j8 -f &quot;/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="rebuild_cache">
+				<Option working_dir="/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/gmake -j8 -f &quot;/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/cmake-build-debug/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="/usr/bin/gmake -j8 -f &quot;/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/gmake -j8 -f &quot;/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/gmake -j8 -f &quot;/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/main.cpp">
+			<Option target="proof_of_failure"/>
+		</Unit>
+		<Unit filename="/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/src/file_mapper.cpp">
+			<Option target="proof_of_failure"/>
+		</Unit>
+		<Unit filename="/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/src/mmap_manager.cpp">
+			<Option target="proof_of_failure"/>
+		</Unit>
+		<Unit filename="/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+	</Project>
+</CodeBlocks_project_file>

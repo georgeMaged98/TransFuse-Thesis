@@ -1,0 +1,43 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/CMakeFiles/gflags_src"
+		},
+		{
+			"file" : "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/CMakeFiles/gflags_src.rule"
+		},
+		{
+			"file" : "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/CMakeFiles/gflags_src-complete.rule"
+		},
+		{
+			"file" : "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gflags/src/gflags_src-stamp/gflags_src-build.rule"
+		},
+		{
+			"file" : "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gflags/src/gflags_src-stamp/gflags_src-configure.rule"
+		},
+		{
+			"file" : "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gflags/src/gflags_src-stamp/gflags_src-download.rule"
+		},
+		{
+			"file" : "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gflags/src/gflags_src-stamp/gflags_src-install.rule"
+		},
+		{
+			"file" : "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gflags/src/gflags_src-stamp/gflags_src-mkdir.rule"
+		},
+		{
+			"file" : "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gflags/src/gflags_src-stamp/gflags_src-patch.rule"
+		},
+		{
+			"file" : "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gflags/src/gflags_src-stamp/gflags_src-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"gflags_src"
+		],
+		"name" : "gflags_src"
+	}
+}

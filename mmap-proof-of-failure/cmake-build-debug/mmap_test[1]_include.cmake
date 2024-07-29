@@ -1,0 +1,5 @@
+if(EXISTS "/Users/georgemaged/Academic/TUM/Thesis/proof_of_failure/cmake-build-debug/mmap_test[1]_tests.cmake")
+  include("/Users/georgemaged/Academic/TUM/Thesis/proof_of_failure/cmake-build-debug/mmap_test[1]_tests.cmake")
+else()
+  add_test(mmap_test_NOT_BUILT mmap_test_NOT_BUILT)
+endif()

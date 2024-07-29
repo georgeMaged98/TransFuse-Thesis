@@ -1,0 +1,38 @@
+[
+{
+  "directory": "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug",
+  "command": "/usr/bin/c++ -I/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/include -isystem /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gtm/gtest/include -isystem /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gflags/include -isystem /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/benchmark/include -g -fsanitize=address -std=gnu++20 -fdiagnostics-color=always -Wall -Wextra -Wvla -o CMakeFiles/transfuse.dir/src/buffer_manager.cc.o -c /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/src/buffer_manager.cc",
+  "file": "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/src/buffer_manager.cc",
+  "output": "CMakeFiles/transfuse.dir/src/buffer_manager.cc.o"
+},
+{
+  "directory": "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug",
+  "command": "/usr/bin/c++ -I/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/include -isystem /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gtm/gtest/include -isystem /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gflags/include -isystem /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/benchmark/include -g -fsanitize=address -std=gnu++20 -fdiagnostics-color=always -Wall -Wextra -Wvla -o CMakeFiles/transfuse.dir/src/hex_dump.cc.o -c /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/src/hex_dump.cc",
+  "file": "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/src/hex_dump.cc",
+  "output": "CMakeFiles/transfuse.dir/src/hex_dump.cc.o"
+},
+{
+  "directory": "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug",
+  "command": "/usr/bin/c++ -I/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/include -isystem /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gtm/gtest/include -isystem /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gflags/include -isystem /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/benchmark/include -isystem /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gtm/gmock/include -g -fsanitize=address -std=gnu++20 -fdiagnostics-color=always -Wall -Wextra -Wvla -o CMakeFiles/tester.dir/test/tester.cc.o -c /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/test/tester.cc",
+  "file": "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/test/tester.cc",
+  "output": "CMakeFiles/tester.dir/test/tester.cc.o"
+},
+{
+  "directory": "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug",
+  "command": "/usr/bin/c++ -I/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/include -isystem /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gtm/gtest/include -isystem /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gflags/include -isystem /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/benchmark/include -isystem /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gtm/gmock/include -g -fsanitize=address -std=gnu++20 -fdiagnostics-color=always -Wall -Wextra -Wvla -o CMakeFiles/tester.dir/test/btree_test.cc.o -c /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/test/btree_test.cc",
+  "file": "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/test/btree_test.cc",
+  "output": "CMakeFiles/tester.dir/test/btree_test.cc.o"
+},
+{
+  "directory": "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug",
+  "command": "/usr/bin/c++ -I/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/include -isystem /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gtm/gtest/include -isystem /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gflags/include -isystem /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/benchmark/include -isystem /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gtm/gmock/include -g -fsanitize=address -std=gnu++20 -fdiagnostics-color=always -Wall -Wextra -Wvla -o CMakeFiles/benchmarks.dir/bench/benchmark.cc.o -c /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/bench/benchmark.cc",
+  "file": "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/bench/benchmark.cc",
+  "output": "CMakeFiles/benchmarks.dir/bench/benchmark.cc.o"
+},
+{
+  "directory": "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug",
+  "command": "/usr/bin/c++ -I/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/include -isystem /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gtm/gtest/include -isystem /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gflags/include -isystem /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/benchmark/include -isystem /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gtm/gmock/include -g -fsanitize=address -std=gnu++20 -fdiagnostics-color=always -Wall -Wextra -Wvla -o CMakeFiles/benchmarks.dir/bench/bm_btree.cc.o -c /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/bench/bm_btree.cc",
+  "file": "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/bench/bm_btree.cc",
+  "output": "CMakeFiles/benchmarks.dir/bench/bm_btree.cc.o"
+}
+]

@@ -1,0 +1,3 @@
+/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/cmake-build-debug/CMakeFiles/proof_of_failure.dir
+/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/cmake-build-debug/CMakeFiles/edit_cache.dir
+/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-proof-of-failure/cmake-build-debug/CMakeFiles/rebuild_cache.dir

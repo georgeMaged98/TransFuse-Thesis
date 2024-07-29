@@ -1,0 +1,8 @@
+/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gtm/src/gtest_src-build/CMakeFiles/gtest.dir
+/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gtm/src/gtest_src-build/CMakeFiles/gtest_main.dir
+/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gtm/src/gtest_src-build/CMakeFiles/edit_cache.dir
+/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gtm/src/gtest_src-build/CMakeFiles/rebuild_cache.dir
+/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gtm/src/gtest_src-build/CMakeFiles/list_install_components.dir
+/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gtm/src/gtest_src-build/CMakeFiles/install.dir
+/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gtm/src/gtest_src-build/CMakeFiles/install/local.dir
+/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gtm/src/gtest_src-build/CMakeFiles/install/strip.dir

@@ -1,0 +1,3 @@
+/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/TransFuse/cmake-build-debug/CMakeFiles/transfuse_app.dir
+/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/TransFuse/cmake-build-debug/CMakeFiles/edit_cache.dir
+/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/TransFuse/cmake-build-debug/CMakeFiles/rebuild_cache.dir

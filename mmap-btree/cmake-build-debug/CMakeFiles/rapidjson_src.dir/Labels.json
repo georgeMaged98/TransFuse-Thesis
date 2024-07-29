@@ -1,0 +1,43 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/CMakeFiles/rapidjson_src"
+		},
+		{
+			"file" : "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/CMakeFiles/rapidjson_src.rule"
+		},
+		{
+			"file" : "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/CMakeFiles/rapidjson_src-complete.rule"
+		},
+		{
+			"file" : "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/rapidjson/src/rapidjson_src-stamp/rapidjson_src-build.rule"
+		},
+		{
+			"file" : "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/rapidjson/src/rapidjson_src-stamp/rapidjson_src-configure.rule"
+		},
+		{
+			"file" : "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/rapidjson/src/rapidjson_src-stamp/rapidjson_src-download.rule"
+		},
+		{
+			"file" : "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/rapidjson/src/rapidjson_src-stamp/rapidjson_src-install.rule"
+		},
+		{
+			"file" : "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/rapidjson/src/rapidjson_src-stamp/rapidjson_src-mkdir.rule"
+		},
+		{
+			"file" : "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/rapidjson/src/rapidjson_src-stamp/rapidjson_src-patch.rule"
+		},
+		{
+			"file" : "/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/rapidjson/src/rapidjson_src-stamp/rapidjson_src-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"rapidjson_src"
+		],
+		"name" : "rapidjson_src"
+	}
+}
