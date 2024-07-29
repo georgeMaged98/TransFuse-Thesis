@@ -1,68 +1,39 @@
-/snap/clion/284/bin/cmake/linux/x64/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/snap/clion/284/bin/ninja/linux/x64/ninja -G Ninja -S /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree -B /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug
-CMake Error at CMakeLists.txt:44 (include):
-  include could not find requested file:
+/snap/clion/284/bin/cmake/linux/x64/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" -S /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree -B /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug
+CMake Deprecation Warning:
+  Support for "Extra Generators" like
 
-    /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake/clang-tidy.cmake
+    CodeBlocks
 
-
-CMake Error at CMakeLists.txt:46 (include):
-  include could not find requested file:
-
-    /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/vendor/benchmark.cmake
+  is deprecated and will be removed from a future version of CMake.  IDEs may
+  use the cmake-file-api(7) to view CMake-generated project build trees.
 
 
-CMake Error at CMakeLists.txt:48 (include):
-  include could not find requested file:
-
-    /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/vendor/gflags.cmake
-
-
-CMake Error at CMakeLists.txt:50 (include):
-  include could not find requested file:
-
-    /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/vendor/googletest.cmake
-
-
-CMake Error at CMakeLists.txt:52 (include):
-  include could not find requested file:
-
-    /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/vendor/rapidjson.cmake
-
-
-CMake Error at CMakeLists.txt:59 (include):
-  include could not find requested file:
-
-    /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/include/local.cmake
-
-
-CMake Error at CMakeLists.txt:76 (include):
-  include could not find requested file:
-
-    /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/src/local.cmake
-
-
-CMake Error at CMakeLists.txt:82 (include):
-  include could not find requested file:
-
-    /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/test/local.cmake
-
-
-CMake Error at CMakeLists.txt:88 (include):
-  include could not find requested file:
-
-    /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/bench/local.cmake
-
-
-CMake Error at CMakeLists.txt:96 (add_dependencies):
-  add_dependencies called with incorrect number of arguments
-
-
+-- The C compiler identification is GNU 13.2.0
+-- The CXX compiler identification is GNU 13.2.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE  
+-- Found Git: /usr/bin/git (found version "2.43.0") 
+-- LINT lint_src: src/buffer_manager.cc;src/hex_dump.cc
+-- LINT lint_test: test/btree_test.cc
 -- [TRANSFUSE] settings
 --     LLVM_INCLUDE_DIRS           = 
 --     LLVM_INSTALL_PREFIX         = 
---     GFLAGS_INCLUDE_DIR          = 
---     GFLAGS_LIBRARY_PATH         = 
+--     GFLAGS_INCLUDE_DIR          = /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gflags/include
+--     GFLAGS_LIBRARY_PATH         = /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gflags/lib/libgflags.a
 -- [TEST] settings
---     GTEST_INCLUDE_DIR           = 
---     GTEST_LIBRARY_PATH          = 
--- Configuring incomplete, errors occurred!
+--     GTEST_INCLUDE_DIR           = /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gtm/gtest/include
+--     GTEST_LIBRARY_PATH          = /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gtm/gtest/lib/libgtest.a
+-- Configuring done (0.7s)
+-- Generating done (0.0s)
+-- Build files have been written to: /media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug

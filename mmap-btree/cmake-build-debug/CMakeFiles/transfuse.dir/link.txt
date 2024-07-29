@@ -1,0 +1,2 @@
+/usr/bin/ar qc libtransfuse.a CMakeFiles/transfuse.dir/src/buffer_manager.cc.o CMakeFiles/transfuse.dir/src/hex_dump.cc.o
+/usr/bin/ranlib libtransfuse.a

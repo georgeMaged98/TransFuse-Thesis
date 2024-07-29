@@ -1,6 +1,0 @@
-# ninja log v5
-1	4945	1722179021139080200	CMakeFiles/gtest_main.dir/src/gtest_main.cc.o	aaec982da7ca5ade
-1	8716	1722179024907069300	CMakeFiles/gtest.dir/src/gtest-all.cc.o	65f4e75f749ba50
-8717	9028	1722179025219068400	libgtest.a	37f43614d67c8348
-9028	9089	1722179025281068200	libgtest_main.a	9d73e8926b3ede8
-13	39	0	CMakeFiles/install.util	8a791a9e70189d71
