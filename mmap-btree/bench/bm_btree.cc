@@ -5,14 +5,15 @@
 #include <thread>
 #include <vector>
 
-using BufferManager = transfuse::BufferManager;
+// using BufferManager = transfuse::BufferManager;
 using BTree = transfuse::BTree<uint64_t, uint64_t, std::less<>, 1024>;
+
 
 void Btree_Multi(benchmark::State& state) {
    const int NUM_THREADS = 4;
    for (auto _ : state) {
-      BufferManager buffer_manager(1024, 100);
-      BTree tree(0, buffer_manager);
+      transfuse::FileMapper file_mapper("btree.dat", 1024);
+      BTree tree(0, file_mapper);
 
       std::barrier sync_point(NUM_THREADS);
       std::vector<std::thread> threads;

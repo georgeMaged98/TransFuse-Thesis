@@ -18,6 +18,7 @@ set(
 set(
     SRC_CC
     src/buffer_manager.cc
+    src/file_mapper.cc
     src/hex_dump.cc
 )
 

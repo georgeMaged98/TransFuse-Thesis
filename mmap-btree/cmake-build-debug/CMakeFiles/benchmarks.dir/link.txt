@@ -1,1 +1,0 @@
-/usr/bin/c++ -g -fsanitize=address CMakeFiles/benchmarks.dir/bench/benchmark.cc.o CMakeFiles/benchmarks.dir/bench/bm_btree.cc.o -o benchmarks  libtransfuse.a vendor/benchmark/lib/libbenchmark.a vendor/gtm/gtest/lib/libgtest.a vendor/gtm/gmock/lib/libgmock.a vendor/gflags/lib/libgflags.a 

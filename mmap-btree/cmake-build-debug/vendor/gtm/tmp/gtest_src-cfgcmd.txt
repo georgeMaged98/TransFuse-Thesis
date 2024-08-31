@@ -1,1 +1,0 @@
-cmd='/snap/clion/284/bin/cmake/linux/x64/bin/cmake;-DCMAKE_INSTALL_PREFIX=/media/george-elfayoumi/Academic/TUM/TransFuse-Thesis/mmap-btree/cmake-build-debug/vendor/gtm/gtest;-DCMAKE_C_COMPILER=/usr/bin/cc;-DCMAKE_CXX_COMPILER=/usr/bin/c++;-DCMAKE_CXX_FLAGS=;-GCodeBlocks - Unix Makefiles;-S;<SOURCE_DIR><SOURCE_SUBDIR>;-B;<BINARY_DIR>'

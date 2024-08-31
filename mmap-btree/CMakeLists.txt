@@ -5,7 +5,11 @@
 cmake_minimum_required(VERSION 3.28)
 project(mmap_btree)
 
-add_executable(mmap_btree main.cpp)
+add_executable(mmap_btree main.cpp
+        src/file_mapper.cc
+        src/hex_dump.cc
+        include/transfuse/file_mapper.h
+        include/transfuse/hex_dump.h)
 
 # ---------------------------------------------------------------------------
 # Environment
