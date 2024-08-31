@@ -1,0 +1,11 @@
+# ninja log v6
+7	442	1723905000416808700	CMakeFiles/transfuse_app.dir/transfuse.cpp.o	d75457e658de3874
+8	1001	1723905000418808700	CMakeFiles/transfuse_app.dir/passthrough.cpp.o	c67279ac20cf1377
+10	1060	1723905000419808800	CMakeFiles/transfuse_app.dir/hello.cpp.o	828794fa1476686a
+1060	1181	1723905001469811000	transfuse_app	effff33d2b8a2a8
+3	763	1723907020430234800	CMakeFiles/transfuse_app.dir/passthrough.cpp.o	c67279ac20cf1377
+763	854	1723907021190233800	transfuse_app	effff33d2b8a2a8
+3	640	1723909236672373400	CMakeFiles/transfuse_app.dir/passthrough.cpp.o	c67279ac20cf1377
+640	740	1723909237309371400	transfuse_app	effff33d2b8a2a8
+3	620	1723910175776922400	CMakeFiles/transfuse_app.dir/passthrough.cpp.o	c67279ac20cf1377
+620	712	1723910176393918100	transfuse_app	effff33d2b8a2a8

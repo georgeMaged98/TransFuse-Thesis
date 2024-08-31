@@ -40,7 +40,7 @@ static void *transfuse_init(struct fuse_conn_info *conn, struct fuse_config *cfg
     cfg->attr_timeout = 0;
     cfg->negative_timeout = 0;
 
-    return NULL;
+    return nullptr;
 }
 
 static int transfuse_access(const char *path, int mask) {
@@ -118,7 +118,7 @@ static int transfuse_read(const char *path, char *buf, size_t size, off_t offset
     int fd;
     int res;
 
-    if (fi == NULL)
+    if (fi == nullptr)
         fd = open(path, O_RDONLY);
     else
         fd = fi->fh;
@@ -130,7 +130,7 @@ static int transfuse_read(const char *path, char *buf, size_t size, off_t offset
     if (res == -1)
         res = -errno;
 
-    if (fi == NULL)
+    if (fi == nullptr)
         close(fd);
     return res;
 }
@@ -141,7 +141,7 @@ static int transfuse_write(const char *path, const char *buf, size_t size, off_t
     int res;
 
     (void) fi;
-    if (fi == NULL)
+    if (fi == nullptr)
         fd = open(path, O_WRONLY);
     else
         fd = fi->fh;
@@ -153,7 +153,7 @@ static int transfuse_write(const char *path, const char *buf, size_t size, off_t
     if (res == -1)
         res = -errno;
 
-    if (fi == NULL)
+    if (fi == nullptr)
         close(fd);
     return res;
 }
