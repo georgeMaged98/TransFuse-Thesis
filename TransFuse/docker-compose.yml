@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  myfuseproject:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    
+    volumes:
+      - .:/TransFuse  # Synchronize the current directory with /TransFuse in the container
+
+    devices:
+      - /dev/fuse:/dev/fuse  # Map the /dev/fuse device file to enable FUSE operations inside the container
+
+    security_opt:
+      - apparmor:unconfined  # Disable AppArmor profiles to remove security restrictions that could interfere with FUSE
+
+    cap_add:
+      - SYS_ADMIN  # Grant SYS_ADMIN capability to allow necessary administrative operations for FUSE
+
+    privileged: true  # Run the container in privileged mode to grant all capabilities and lift security restrictions
+
+    stdin_open: true  # Keep stdin open to allow interactive input
+    tty: true  # Allocate a pseudo-TTY for interactive shell sessions
