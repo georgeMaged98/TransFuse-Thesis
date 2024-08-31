@@ -87,7 +87,7 @@ static void *transfuse_init(struct fuse_conn_info *conn,
     cfg->negative_timeout = 0;
     printf(" --> transfuse_init() \n");
 
-    return NULL;
+    return nullptr;
 }
 
 // fuse_operations::getattr: This callback retrieves file attributes,
@@ -123,7 +123,7 @@ static int transfuse_access(const char *path, int mask) {
 }
 
 static int transfuse_readlink(const char *path, char *buf, size_t size) {
-    int res;
+    ssize_t res;
 
     res = readlink(path, buf, size - 1);
     if (res == -1)
@@ -152,10 +152,10 @@ static int transfuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler
     printf("--> transfuse_readdir() and  path: %s -> fpath: %s\n", path, fpath);
 
     dp = opendir(fpath);
-    if (dp == NULL)
+    if (dp == nullptr)
         return -errno;
 
-    while ((de = readdir(dp)) != NULL) {
+    while ((de = readdir(dp)) != nullptr) {
         struct stat st;
         memset(&st, 0, sizeof(st));
         st.st_ino = de->d_ino;
@@ -176,7 +176,7 @@ static int transfuse_mknod(const char *path, mode_t mode, dev_t rdev) {
     // Log the constructed path for debugging
     printf(" --> transfuse_mknod() path: %s -> fpath: %s\n", path, fpath);
 
-    res = mknod_wrapper(AT_FDCWD, fpath, NULL, mode, rdev);
+    res = mknod_wrapper(AT_FDCWD, fpath, nullptr, mode, rdev);
     if (res == -1)
         return -errno;
 
@@ -301,7 +301,7 @@ static int transfuse_truncate(const char *path, off_t size,
     // Log the constructed path for debugging
     printf(" --> transfuse_truncate() path: %s -> fpath: %s\n", path, fpath);
 
-    if (fi == NULL || fi->fh == 0) {
+    if (fi == nullptr || fi->fh == 0) {
         // Use truncate if file info is NULL or file handle is invalid
         res = truncate(fpath, size);
     } else {
@@ -331,7 +331,7 @@ static int transfuse_utimens(const char *path, const struct timespec ts[2],
 #endif
 
 
-static int transfuse_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
+static int transfuse_create(const char *path, const mode_t mode, struct fuse_file_info *fi) {
     int fd;
     char fpath[PATH_MAX];
 
@@ -370,10 +370,10 @@ static int transfuse_open(const char *path, struct fuse_file_info *fi) {
 }
 
 
-static int transfuse_read(const char *path, char *buf, size_t size, off_t offset,
+static int transfuse_read(const char *path, char *buf, const size_t size, const off_t offset,
                           struct fuse_file_info *fi) {
     int fd;
-    int res;
+    ssize_t res;
     char fpath[PATH_MAX];
     // Construct the full path by combining the FUSE root directory with the relative path
     snprintf(fpath, sizeof(fpath), "%s%s", fuse_root_dir, path);
@@ -381,7 +381,7 @@ static int transfuse_read(const char *path, char *buf, size_t size, off_t offset
     printf(" --> transfuse_read() and path is %s -> fpath: %s\n", path, fpath);
 
     // Open the file if the file info is NULL
-    if (fi == NULL || fi->fh == 0) {
+    if (fi == nullptr || fi->fh == 0) {
         fd = open(fpath, O_RDONLY);
         if (fd == -1) {
             perror("Error opening file");
@@ -399,7 +399,7 @@ static int transfuse_read(const char *path, char *buf, size_t size, off_t offset
     }
 
     // Close the file if it was opened in this function
-    if (fi == NULL || fi->fh == 0) {
+    if (fi == nullptr || fi->fh == 0) {
         close(fd);
     }
 
@@ -407,7 +407,7 @@ static int transfuse_read(const char *path, char *buf, size_t size, off_t offset
 }
 
 
-static int transfuse_write(const char *path, const char *buf, size_t size,
+static int transfuse_write(const char *path, const char *buf, const size_t size,
                            off_t offset, struct fuse_file_info *fi) {
     int fd;
     int res;
@@ -417,10 +417,10 @@ static int transfuse_write(const char *path, const char *buf, size_t size,
     snprintf(fpath, sizeof(fpath), "%s%s", fuse_root_dir, path);
 
     // Log the constructed path for debugging
-    printf(" --> transfuse_write() and path is %s -> fpath: %s\n", path, fpath);
+    printf(" --> transfuse_write() and path is %s -> fpath: %s. Offset is: %ld and Size is: %lu\n", path, fpath, offset, size);
 
     // Open the file if the file info is NULL
-    if (fi == NULL || fi->fh == 0) {
+    if (fi == nullptr || fi->fh == 0) {
         fd = open(fpath, O_WRONLY);
         if (fd == -1) {
             perror("Error opening file");
@@ -438,7 +438,7 @@ static int transfuse_write(const char *path, const char *buf, size_t size,
     }
 
     // Close the file if it was opened in this function
-    if (fi == NULL || fi->fh == 0) {
+    if (fi == nullptr || fi->fh == 0) {
         close(fd);
     }
 
@@ -591,7 +591,7 @@ static off_t transfuse_lseek(const char *path, off_t off, int whence, struct fus
     int fd;
     off_t res;
 
-    if (fi == NULL)
+    if (fi == nullptr)
         fd = open(path, O_RDONLY);
     else
         fd = fi->fh;
@@ -603,7 +603,7 @@ static off_t transfuse_lseek(const char *path, off_t off, int whence, struct fus
     if (res == -1)
         res = -errno;
 
-    if (fi == NULL)
+    if (fi == nullptr)
         close(fd);
     return res;
 }
