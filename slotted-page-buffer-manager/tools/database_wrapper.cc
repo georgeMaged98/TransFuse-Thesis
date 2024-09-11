@@ -1,5 +1,6 @@
 #include "moderndbs/database.h"
 #include <iostream>
+#include <cassert>
 
 namespace moderndbs {
     std::unique_ptr<schema::Schema> getTPCHSchemaLight() {
@@ -180,31 +181,59 @@ int main() {
 //    schema_segment.write();
     db.load_schema(49);
     auto &table = db.get_schema().tables[0];
-    auto values = std::vector<std::string>{std::to_string(1000), std::to_string(1000), "T", std::to_string(1000), std::to_string(1000)};
-    auto new_values = std::vector<std::string>{std::to_string(2000), std::to_string(3000), "L", std::to_string(4000), std::to_string(5000)};
 //    auto tid = db.insert(table, values);
 //    db.read_tuple(table, moderndbs::TID(0));
 //    db.update_tuple(table, moderndbs::TID(0), values);
-    db.read_tuple(table, moderndbs::TID(0));
+//    db.read_tuple(table, moderndbs::TID(0));
 
 //    db.delete_tuple(table, moderndbs::TID(0));
 //    auto tid = db.insert(table, values);
 //    db.read_tuple(table, moderndbs::TID(1));
 
 
-//    std::vector<moderndbs::TID> tids;
-//    for (uint64_t i = 0; i < 1000; ++i) {
-//        auto values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"),
-//                                               std::to_string(i * 2), std::to_string(i * 2)};
-//        auto tid = db.insert(table, values);
-//        tids.push_back(tid);
-//        std::vector<std::string> result = db.read_tuple(table, tid);
-//        compareVectors(values, result);
-//    }
-//
-//    for (uint64_t i = 0; i < 1000; ++i) {
-//        auto expected_values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
-//        std::vector<std::string> result = db.read_tuple(table, tids[i]);
-//        compareVectors(expected_values, result);
-//    }
+    std::vector<moderndbs::TID> tids;
+    // Insert into table and read from it immediately
+    for (uint64_t i = 0; i < 1000; ++i) {
+        auto values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
+        auto tid = db.insert(table, values);
+        tids.push_back(tid);
+        std::vector<std::string> result = db.read_tuple(table, tid);
+        compareVectors(values, result);
+    }
+
+    // Now read inserted tids again
+    for (uint64_t i = 0; i < 1000; ++i) {
+        auto expected_values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
+        std::vector<std::string> result = db.read_tuple(table, tids[i]);
+        compareVectors(expected_values, result);
+    }
+
+    // Update some tuples
+    for (uint64_t i = 1; i < 1000; i += 2) {
+        auto new_values = std::vector<std::string>{std::to_string(2000), std::to_string(3000), "L", std::to_string(4000), std::to_string(5000)};
+        db.update_tuple(table, tids[i], new_values);
+        std::vector<std::string> result = db.read_tuple(table, tids[i]);
+        compareVectors(new_values, result);
+    }
+
+    // Read Everything -> Updated tids should have updated values
+    for (uint64_t i = 0; i < 1000; ++i) {
+        auto old_values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
+        auto new_values = std::vector<std::string>{std::to_string(2000), std::to_string(3000), "L", std::to_string(4000), std::to_string(5000)};
+        std::vector<std::string> result = db.read_tuple(table, tids[i]);
+        if(i % 2 == 1){
+            compareVectors(new_values, result);
+        }else{
+            compareVectors(old_values, result);
+        }
+    }
+
+
+    // Test Delete
+//    auto values = std::vector<std::string>{std::to_string(1000), std::to_string(1000), "T", std::to_string(1000), std::to_string(1000)};
+//    auto tid1 = db.insert(table, values);
+//    db.read_tuple(table, tid1);
+//    db.delete_tuple(table, tid1);
+//    auto new_tid = db.insert(table, values);
+//    assert(tid1.get_value() == new_tid.get_value());
 }

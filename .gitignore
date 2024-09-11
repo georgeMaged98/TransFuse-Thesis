@@ -1,1 +1,5 @@
-/**/cmake-build-debug/
+/slotted-page-buffer-manager/cmake-build-debug/
+/mmap-btree/cmake-build-debug/
+/Transfuse/cmake-build-debug/
+/Transfuse/.idea/
+/slotted-page-buffer-manager/.idea/
