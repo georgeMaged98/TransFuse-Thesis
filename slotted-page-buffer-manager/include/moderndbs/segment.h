@@ -126,7 +126,7 @@ namespace moderndbs {
         /// @param[in] record       The buffer that is read into.
         /// @param[in] capacity     The capacity of the buffer that is read into.
         /// @return                 The bytes that have been read.
-        uint32_t read(TID tid, std::byte *record, uint32_t capacity) const;
+        std::optional<uint32_t> read(TID tid, std::byte *record, uint32_t capacity) const;
 
         /// Write a record.
         /// @param[in] tid          The TID that identifies the record.
@@ -144,7 +144,8 @@ namespace moderndbs {
 
         /// Removes the record from the slotted page
         /// @param[in] tid          The TID that identifies the record.
-        void erase(TID tid);
+        /// @return                 whether the record was successfully deleted or not
+        bool erase(TID tid);
 
     protected:
         /// Schema segment

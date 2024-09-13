@@ -23,7 +23,6 @@ TID SPSegment::allocate(uint32_t size) {
         auto *page_data = page.get_data();
         // If the page is already there, it's sufficient to use reinterpret_cast<SlottedPage*>
         auto *slotted_page = reinterpret_cast<SlottedPage *>(page_data);
-
         auto slot_id = slotted_page->allocate(size, buffer_manager.get_page_size());
         // Unfix the page
         buffer_manager.unfix_page(page, true);
@@ -56,7 +55,7 @@ TID SPSegment::allocate(uint32_t size) {
     }
 }
 
-uint32_t SPSegment::read(TID tid, std::byte *record, uint32_t capacity) const {
+std::optional<uint32_t> SPSegment::read(TID tid, std::byte *record, uint32_t capacity) const {
     // TODO: add your implementation here
     // The tid.get_page_id() does the same functionality of the XOR that was used in the schema_segment and fsi_segment.
     // Hence, we just pass the result page_id to buffer_manager
@@ -65,11 +64,10 @@ uint32_t SPSegment::read(TID tid, std::byte *record, uint32_t capacity) const {
     auto &page = buffer_manager.fix_page(page_id, true);
     // If the page is already there, it's sufficient to use reinterpret_cast<SlottedPage*>
     auto *slotted_page = reinterpret_cast<SlottedPage *>(page.get_data());
-
     auto &slot = slotted_page->get_slots()[tid.get_slot()];
 
     if (slot.is_empty()) {
-        throw std::logic_error{"TID Not Found!"};
+        return std::nullopt;
     }
     if (slot.is_redirect()) {
         TID redirect_tid = slot.as_redirect_tid();
@@ -93,8 +91,8 @@ uint32_t SPSegment::write(TID tid, std::byte *record, uint32_t record_size, bool
     // If the page is already there, it's sufficient to use reinterpret_cast<SlottedPage*>
     auto &slotted_page = *reinterpret_cast<SlottedPage *>(page.get_data());
     auto &slot = slotted_page.get_slots()[tid.get_slot()];
-    if(is_update && slot.is_empty()){
-        throw std::logic_error{"TID Not Found!"};
+    if (is_update && slot.is_empty()) {
+        throw std::logic_error("TID Not Found!");
     }
 
     if (slot.is_redirect()) {
@@ -160,7 +158,7 @@ void SPSegment::resize(TID tid, uint32_t new_length) {
     }
 }
 
-void SPSegment::erase(TID tid) {
+bool SPSegment::erase(TID tid) {
     // TODO: add your implementation here
     // tid.get_page_id() does the same functionality of the XOR that was used in the schema_segment and fsi_segment.
     // Hence, we just pass the result page_id to buffer_manager
@@ -171,12 +169,13 @@ void SPSegment::erase(TID tid) {
     auto &slot = slotted_page.get_slots()[tid.get_slot()];
 
     if (slot.is_empty()) {
-        throw std::logic_error{"TID Not Found!"};
+        return false;
     }
     if (slot.is_redirect()) {
-        erase(slot.as_redirect_tid());
+        return erase(slot.as_redirect_tid());
     }
     slotted_page.erase(tid.get_slot());
     buffer_manager.unfix_page(page, true);
     fsi.update(tid.get_page_id(segment_id), slotted_page.get_free_space());
+    return true;
 }

@@ -117,6 +117,10 @@ std::unique_ptr<File> File::open_file(const char* filename, Mode mode) {
     return std::make_unique<PosixFile>(filename, mode);
 }
 
+void File::delete_file(const char* filename) {
+    std::remove(filename);
+}
+
 
 std::unique_ptr<File> File::make_temporary_file() {
     char file_template[] = ".tmpfile-XXXXXX";

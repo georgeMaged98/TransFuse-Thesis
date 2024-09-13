@@ -26,7 +26,7 @@ namespace moderndbs {
         moderndbs::TID insert(const schema::Table &table, const std::vector<std::string> &data);
 
         /// Read a tuple by TID from the table
-        std::vector<std::string> read_tuple(const schema::Table &table, TID tid);
+        std::optional<std::vector<std::string>> read_tuple(const schema::Table &table, TID tid);
 
         /// Delete a tuple by TID from the table
         void delete_tuple(const schema::Table &table, TID tid);

@@ -1,7 +1,7 @@
 #include "moderndbs/database.h"
 
 moderndbs::TID moderndbs::Database::insert(const moderndbs::schema::Table &table,
-                                           const std::vector<std::string> &data) {
+                                                          const std::vector<std::string> &data) {
     if (table.columns.size() != data.size()) {
         throw std::runtime_error("invalid data");
     }
@@ -34,7 +34,7 @@ moderndbs::TID moderndbs::Database::insert(const moderndbs::schema::Table &table
 
     SPSegment &sp = *slotted_pages.at(table.sp_segment);
     auto tid = sp.allocate(insert_buffer.size());
-    sp.write(tid, reinterpret_cast<std::byte *>(insert_buffer.data()), insert_buffer.size());
+    auto written_bytes = sp.write(tid, reinterpret_cast<std::byte *>(insert_buffer.data()), insert_buffer.size());
     std::cout << "Tuple with TID " << tid.get_value() << " inserted!\n";
     return tid;
 }
@@ -97,10 +97,13 @@ moderndbs::schema::Schema &moderndbs::Database::get_schema() {
     return *schema_segment->get_schema();
 }
 
-std::vector<std::string> moderndbs::Database::read_tuple(const moderndbs::schema::Table &table, moderndbs::TID tid) {
+std::optional<std::vector<std::string>> moderndbs::Database::read_tuple(const moderndbs::schema::Table &table, moderndbs::TID tid) {
     auto &sps = *slotted_pages.at(table.sp_segment);
     auto read_buffer = std::vector<char>(1024);
     auto read_bytes = sps.read(tid, reinterpret_cast<std::byte *>(read_buffer.data()), read_buffer.size());
+    if (!read_bytes.has_value()) {
+        return std::nullopt;
+    }
 
     auto values = std::vector<std::string>();
     // Deserialize the data
@@ -125,7 +128,7 @@ std::vector<std::string> moderndbs::Database::read_tuple(const moderndbs::schema
                 values.emplace_back(str);
                 break;
         }
-        if (std::distance(read_buffer.data(), current) > read_bytes) {
+        if (std::distance(read_buffer.data(), current) > read_bytes.value()) {
             break;
         }
         std::cout << " | ";
@@ -148,8 +151,10 @@ void moderndbs::Database::load_schema(int16_t schema) {
     schema_segment = std::make_unique<SchemaSegment>(schema, buffer_manager);
     schema_segment->read();
     for (auto &table: schema_segment->get_schema()->tables) {
-        free_space_inventory.emplace(table.fsi_segment, std::make_unique<FSISegment>(table.fsi_segment, buffer_manager, table));
-        slotted_pages.emplace(table.sp_segment, std::make_unique<SPSegment>(table.sp_segment, buffer_manager, *schema_segment,
+        free_space_inventory.emplace(table.fsi_segment,
+                                     std::make_unique<FSISegment>(table.fsi_segment, buffer_manager, table));
+        slotted_pages.emplace(table.sp_segment,
+                              std::make_unique<SPSegment>(table.sp_segment, buffer_manager, *schema_segment,
                                                           *free_space_inventory.at(table.fsi_segment), table));
     }
 }

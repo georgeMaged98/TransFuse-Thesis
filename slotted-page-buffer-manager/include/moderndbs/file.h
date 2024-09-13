@@ -71,9 +71,13 @@ public:
     /// @param[in] mode     `Mode` that should be used to open the file.
     [[nodiscard]] static std::unique_ptr<File> open_file(const char* filename, Mode mode);
 
+    /// Deletes a File.
+    static void delete_file(const char* filename);
+
     /// Opens a temporary file in `WRITE` mode. The file will be deleted
     /// automatically after use.
     [[nodiscard]] static std::unique_ptr<File> make_temporary_file();
+
 };
 
 class PosixFile
@@ -82,7 +86,7 @@ private:
     Mode mode;
     int fd;
     size_t cached_size;
-    
+
     [[nodiscard]] size_t read_size() const;
 
 public:

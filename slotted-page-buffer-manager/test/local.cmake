@@ -7,10 +7,10 @@
 # ---------------------------------------------------------------------------
 
 set(TEST_CC
-    test/segment_test.cc
-    test/slotted_page_test.cc
-    test/buffer_manager_test.cc
-)
+        test/segment_test.cc
+        test/slotted_page_test.cc
+        test/buffer_manager_test.cc
+        test/database_operations_test.cc)
 
 # ---------------------------------------------------------------------------
 # Tester
