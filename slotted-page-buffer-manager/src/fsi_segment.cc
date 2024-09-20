@@ -1,4 +1,5 @@
 #include "moderndbs/segment.h"
+#include <cstring>
 
 using FSISegment = moderndbs::FSISegment;
 
@@ -20,7 +21,7 @@ uint8_t FSISegment::encode_free_space(uint32_t free_space) {
 uint32_t FSISegment::decode_free_space(uint8_t free_space) {
     // TODO: add your implementation here
     // Linear scale
-    uint32_t decoded_free_space = (uint32_t) (free_space * (buffer_manager.get_page_size() / 16));
+   const auto decoded_free_space = static_cast<uint32_t>(free_space * (buffer_manager.get_page_size() / 16));
     // Logarithmic scale
     //   uint32_t decoded_free_space = (uint32_t) pow(2, free_space - 1);
     return decoded_free_space;
@@ -83,5 +84,6 @@ std::optional<uint64_t> FSISegment::find(uint32_t required_space) {
         }
     }
     // Unfix the page
-    buffer_manager.unfix_page(page, true);
+   buffer_manager.unfix_page(page, true);
+   return std::nullopt;
 }

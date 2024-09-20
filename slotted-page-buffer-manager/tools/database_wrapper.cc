@@ -1,6 +1,7 @@
 #include "moderndbs/database.h"
-#include <iostream>
 #include <cassert>
+#include <iostream>
+#include <random>
 
 namespace moderndbs {
     std::unique_ptr<schema::Schema> getTPCHSchemaLight() {
@@ -183,52 +184,39 @@ int main() {
     }
     db.load_schema(49);
     auto &table = db.get_schema().tables[0];
-    db.read_tuple(table, moderndbs::TID(1638424));
-//    std::vector<moderndbs::TID> tids;
-//    // Insert into table and read from it immediately
-//    for (uint64_t i = 0; i < 1000; ++i) {
-//        auto values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
-//        auto tid = db.insert(table, values);
-//        tids.push_back(tid);
-//        auto result = db.read_tuple(table, tid);
-//        if(result.has_value())
-//            compareVectors(values, result.value());
-//    }
-//
-//    // Now read inserted tids again
-//    for (uint64_t i = 0; i < 1000; ++i) {
-//        auto expected_values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
-//        auto result = db.read_tuple(table, tids[i]);
-//        if(result.has_value())
-//            compareVectors(expected_values, result.value());
-//    }
 
-//    // Update some tuples
-//    for (uint64_t i = 1; i < 1000; i += 2) {
-//        auto new_values = std::vector<std::string>{std::to_string(2000), std::to_string(3000), "L", std::to_string(4000), std::to_string(5000)};
-//        db.update_tuple(table, tids[i], new_values);
-//        std::vector<std::string> result = db.read_tuple(table, tids[i]);
-//        compareVectors(new_values, result);
-//    }
-//
-//    // Read Everything -> Updated tids should have updated values
-//    for (uint64_t i = 0; i < 1000; ++i) {
-//        auto old_values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
-//        auto new_values = std::vector<std::string>{std::to_string(2000), std::to_string(3000), "L", std::to_string(4000), std::to_string(5000)};
-//        std::vector<std::string> result = db.read_tuple(table, tids[i]);
-//        if(i % 2 == 1){
-//            compareVectors(new_values, result);
-//        }else{
-//            compareVectors(old_values, result);
-//        }
-//    }
+    std::vector<moderndbs::TID> tids;
+    // Insert into table and read from it immediately
+    for (uint64_t i = 0; i < 1500; ++i) {
+        auto values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
+        auto tid = db.insert(table, values);
+        tids.push_back(tid);
+        auto result = db.read_tuple(table, tid);
+        // if(result.has_value())
+        //     compareVectors(values, result.value());
+    }
+
+   // Now read inserted tids again
+   for (uint64_t i = 0;i < 1500; ++i) {
+      auto expected_values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
+      auto result = db.read_tuple(table, tids[i]);
+      // ASSERT_TRUE(result);
+      // ASSERT_TRUE(compareVectors(expected_values, result.value()));
+   }
 
 
-    // Test Delete
-//    auto values = std::vector<std::string>{std::to_string(1000), std::to_string(1000), "T", std::to_string(1000), std::to_string(1000)};
-//    auto tid1 = db.insert(table, values);
-//    db.read_tuple(table, tid1);
-//    db.delete_tuple(table, tid1);
-//    auto new_tid = db.insert(table, values);
-//    assert(tid1.get_value() == new_tid.get_value());
+   // // moderndbs::TID tid = moderndbs::TID(0, 0);
+   // // std::cout << tid.get_value() << " Page: " << tid.get_page_id(table.sp_segment) << " Page: " << tid.get_slot() << std::endl;
+   // std::mt19937_64 engine{0};
+   // std::uniform_int_distribution<uint64_t> page{0, 39};
+   // std::uniform_int_distribution<uint64_t> slot{0, 37};
+   // for (int i = 0; i < 50; ++i) {
+   //    uint64_t random_page = page(engine);
+   //    uint64_t random_slot = slot(engine);
+   //    auto tid = moderndbs::TID(random_page, random_slot);
+   //    // Alternatively, you could print them directly:
+   //    // std::cout << "RAND: " << random_value << " " << random_value2  << " \n";
+   //    // std::cout << "TID: " << tid.get_page_id(table.sp_segment) << " Slot: " <<tid.get_slot() << std::endl;
+   //    auto result = db.read_tuple(table, tid);
+   // }
 }

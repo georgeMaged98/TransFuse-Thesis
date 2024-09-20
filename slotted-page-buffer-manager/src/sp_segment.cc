@@ -1,6 +1,8 @@
 #include "moderndbs/segment.h"
 #include "moderndbs/slotted_page.h"
 
+#include <cstring>
+
 using moderndbs::Segment;
 using moderndbs::SPSegment;
 using moderndbs::TID;
@@ -61,7 +63,7 @@ std::optional<uint32_t> SPSegment::read(TID tid, std::byte *record, uint32_t cap
     // Hence, we just pass the result page_id to buffer_manager
     auto page_id = tid.get_page_id(segment_id);
     // First, I need to find the slot that was previously allocated in allocate method. TID is used for that.
-    auto &page = buffer_manager.fix_page(page_id, true);
+    auto &page = buffer_manager.fix_page(page_id, false);
     // If the page is already there, it's sufficient to use reinterpret_cast<SlottedPage*>
     auto *slotted_page = reinterpret_cast<SlottedPage *>(page.get_data());
     auto &slot = slotted_page->get_slots()[tid.get_slot()];
@@ -70,15 +72,15 @@ std::optional<uint32_t> SPSegment::read(TID tid, std::byte *record, uint32_t cap
         return std::nullopt;
     }
     if (slot.is_redirect()) {
-        TID redirect_tid = slot.as_redirect_tid();
-        buffer_manager.unfix_page(page, true);
-        return read(redirect_tid, record, capacity);
-    } else {
-        uint32_t read_bytes = std::min(slot.get_size(), capacity);
-        memcpy(record, slotted_page->get_data() + slot.get_offset(), read_bytes);
-        buffer_manager.unfix_page(page, true);
-        return read_bytes;
+       TID redirect_tid = slot.as_redirect_tid();
+       buffer_manager.unfix_page(page, false);
+       return read(redirect_tid, record, capacity);
     }
+   // Not a redirect slot.
+    uint32_t read_bytes = std::min(slot.get_size(), capacity);
+    memcpy(record, slotted_page->get_data() + slot.get_offset(), read_bytes);
+    buffer_manager.unfix_page(page, false);
+    return read_bytes;
 }
 
 uint32_t SPSegment::write(TID tid, std::byte *record, uint32_t record_size, bool is_update) {

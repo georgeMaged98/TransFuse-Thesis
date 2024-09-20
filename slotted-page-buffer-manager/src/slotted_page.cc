@@ -1,5 +1,6 @@
 #include "moderndbs/slotted_page.h"
 #include <cstring>
+#include <stdexcept>
 
 using moderndbs::SlottedPage;
 

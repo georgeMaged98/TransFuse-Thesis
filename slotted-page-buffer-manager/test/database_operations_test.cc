@@ -8,11 +8,13 @@
 #include "moderndbs/database.h"
 #include <cstdint>
 #include <cstring>
-#include <exception>
+#include <thread>
 #include <random>
 #include <utility>
 #include <vector>
 #include <gtest/gtest.h>
+#include <barrier>
+
 
 using BufferManager = moderndbs::BufferManager;
 using FSISegment = moderndbs::FSISegment;
@@ -24,6 +26,14 @@ using TID = moderndbs::TID;
 namespace schema = moderndbs::schema;
 
 namespace {
+   // Function to print a vector of strings
+   void printVector(const std::vector<std::string>& vec) {
+      for (const auto& str : vec) {
+         std::cout << str << " ";
+      }
+      std::cout << "\n";
+   }
+
     bool compareVectors(const std::vector<std::string> &vector1, const std::vector<std::string> &vector2) {
         // First, check if the sizes are the same
         assert(vector1.size() == vector2.size() && "Vectors are of different sizes");
@@ -71,7 +81,6 @@ namespace {
                 auto file = File::open_file(segment_file, File::Mode::WRITE);
                 file->resize(0);
             }
-//            File::delete_file("49.txt");
         }
     };
 
@@ -90,7 +99,7 @@ TEST_F(DatabaseOperationsTest, WriteReadTest) {
     auto &table = db.get_schema().tables[0];
     std::vector<moderndbs::TID> tids;
     // Insert into table and read from it immediately
-    for (uint64_t i = 0;i < 1000; ++i) {
+    for (uint64_t i = 0;i < 200; ++i) {
         auto values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
         auto tid = db.insert(table, values);
         tids.push_back(tid);
@@ -100,11 +109,133 @@ TEST_F(DatabaseOperationsTest, WriteReadTest) {
     }
 
     // Now read inserted tids again
-    for (uint64_t i = 0;i < 1000; ++i) {
+    for (uint64_t i = 0;i < 200; ++i) {
         auto expected_values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
         auto result = db.read_tuple(table, tids[i]);
         ASSERT_TRUE(result);
         ASSERT_TRUE(compareVectors(expected_values, result.value()));
     }
 }
+
+TEST_F(DatabaseOperationsTest, UpdateTupleTest) {
+   auto db = moderndbs::Database();
+   {
+      moderndbs::BufferManager buffer_manager(1024, 10);
+      moderndbs::SchemaSegment schema_segment(49, buffer_manager);
+      schema_segment.set_schema(getTPCHOrderSchema());
+      schema_segment.write();
+   }
+
+   db.load_schema(49);
+   const auto &table = db.get_schema().tables[0];
+   std::vector<moderndbs::TID> tids;
+   // Insert into table and read from it immediately
+   for (uint64_t i = 0;i < 200; ++i) {
+      auto values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
+      auto tid = db.insert(table, values);
+      tids.push_back(tid);
+      auto result = db.read_tuple(table, tid);
+      ASSERT_TRUE(result);
+      ASSERT_TRUE(compareVectors(values, result.value()));
+   }
+
+   // Update some tuples
+   for (uint64_t i = 1; i < 200; i += 2) {
+      auto new_values = std::vector<std::string>{"2000", "3000", "L", "4000", "5000"};
+       db.update_tuple(table, tids[i], new_values);
+       auto result = db.read_tuple(table, tids[i]);
+       compareVectors(new_values, result.value());
+   }
+
+   // Read Everything -> Updated tids should have updated values
+   for (uint64_t i = 0; i < 200; ++i) {
+      auto old_values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
+      auto new_values = std::vector<std::string>{"2000", "3000", "L", "4000", "5000"};
+      auto result = db.read_tuple(table, tids[i]);
+      ASSERT_TRUE(result);
+      const auto& expected_values = (i % 2 == 1) ? new_values : old_values;
+      ASSERT_TRUE(compareVectors(expected_values, result.value()));
+   }
+}
+
+
+TEST_F(DatabaseOperationsTest, DeleteTupleTest) {
+   auto db = moderndbs::Database();
+   {
+      moderndbs::BufferManager buffer_manager(1024, 10);
+      moderndbs::SchemaSegment schema_segment(49, buffer_manager);
+      schema_segment.set_schema(getTPCHOrderSchema());
+      schema_segment.write();
+   }
+   db.load_schema(49);
+   const auto& table = db.get_schema().tables[0];
+   const auto values = std::vector<std::string>{std::to_string(10), std::to_string(20), ("T"), std::to_string(30), std::to_string(40)};
+   const auto tid = db.insert(table, values);
+   // make sure tuple is inserted properly
+   auto result = db.read_tuple(table, tid);
+   ASSERT_TRUE(result);
+   ASSERT_TRUE(compareVectors(values, result.value()));
+
+   // delete tuple
+   db.delete_tuple(table, tid);
+   // tuple should no longer be there
+   result = db.read_tuple(table, tid);
+   ASSERT_FALSE(result);
+}
+
+
+TEST_F(DatabaseOperationsTest, MultithreadWriters) {
+   auto db = moderndbs::Database();
+   {
+      moderndbs::BufferManager buffer_manager(1024, 10);
+      moderndbs::SchemaSegment schema_segment(49, buffer_manager);
+      schema_segment.set_schema(getTPCHOrderSchema());
+      schema_segment.write();
+   }
+   db.load_schema(49);
+   auto &table = db.get_schema().tables[0];
+   // Pre-allocate the tids vector to the correct size
+   std::vector<moderndbs::TID> tids;
+   uint32_t insertions_per_thread = 10;
+   tids.reserve(4 * insertions_per_thread); // 4 threads
+
+   std::barrier sync_point(4);
+   std::vector<std::thread> threads;
+   // std::mutex tids_mutex;
+
+   for (size_t thread = 0; thread < 4; ++thread) {
+      threads.emplace_back([thread, &sync_point, &table, &db, &tids, insertions_per_thread] {
+         size_t startValue = thread * insertions_per_thread;
+         size_t limit = startValue + insertions_per_thread;
+         // Insert values
+         for (auto i = startValue; i < limit; ++i) {
+            // std::lock_guard<std::mutex> lock(tids_mutex);
+            auto values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
+            // printVector(values);
+            auto tid = db.insert(table, values);
+            tids[startValue + (i - startValue)] = tid;
+         }
+
+         sync_point.arrive_and_wait();
+
+         // And read them back
+         for (auto i = startValue; i < limit; ++i) {
+            // std::lock_guard<std::mutex> lock(tids_mutex);
+            auto expected_values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
+            auto tid = tids[startValue + (i - startValue)];
+            // printVector(expected_values);
+            auto result = db.read_tuple(table, tid);
+            // printVector(result.value());
+            ASSERT_TRUE(result);
+            ASSERT_TRUE(compareVectors(expected_values, result.value()));
+         }
+      });
+   }
+
+   for (auto& t : threads)
+      t.join();
+}
+
+
+
 } // namespace

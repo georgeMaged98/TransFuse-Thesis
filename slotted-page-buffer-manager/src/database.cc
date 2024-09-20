@@ -1,7 +1,8 @@
 #include "moderndbs/database.h"
 
-moderndbs::TID moderndbs::Database::insert(const moderndbs::schema::Table &table,
+moderndbs::TID moderndbs::Database::insert(const schema::Table &table,
                                                           const std::vector<std::string> &data) {
+   latch.lock();
     if (table.columns.size() != data.size()) {
         throw std::runtime_error("invalid data");
     }
@@ -34,12 +35,13 @@ moderndbs::TID moderndbs::Database::insert(const moderndbs::schema::Table &table
 
     SPSegment &sp = *slotted_pages.at(table.sp_segment);
     auto tid = sp.allocate(insert_buffer.size());
-    auto written_bytes = sp.write(tid, reinterpret_cast<std::byte *>(insert_buffer.data()), insert_buffer.size());
+    sp.write(tid, reinterpret_cast<std::byte *>(insert_buffer.data()), insert_buffer.size());
     std::cout << "Tuple with TID " << tid.get_value() << " inserted!\n";
+   latch.unlock();
     return tid;
 }
 
-void moderndbs::Database::update_tuple(const schema::Table &table, moderndbs::TID tid,
+void moderndbs::Database::update_tuple(const schema::Table &table, const TID tid,
                                        const std::vector<std::string> &data) {
     if (table.columns.size() != data.size()) {
         throw std::runtime_error("invalid data");
@@ -97,17 +99,19 @@ moderndbs::schema::Schema &moderndbs::Database::get_schema() {
     return *schema_segment->get_schema();
 }
 
-std::optional<std::vector<std::string>> moderndbs::Database::read_tuple(const moderndbs::schema::Table &table, moderndbs::TID tid) {
+std::optional<std::vector<std::string>> moderndbs::Database::read_tuple(const moderndbs::schema::Table &table, const moderndbs::TID tid) {
+   latch.lock();
     auto &sps = *slotted_pages.at(table.sp_segment);
     auto read_buffer = std::vector<char>(1024);
     auto read_bytes = sps.read(tid, reinterpret_cast<std::byte *>(read_buffer.data()), read_buffer.size());
     if (!read_bytes.has_value()) {
+       latch.unlock();
         return std::nullopt;
     }
 
     auto values = std::vector<std::string>();
     // Deserialize the data
-    std::cout << "TID " << tid.get_value() << "  :  ";
+    std::cout << "TID " << tid.get_value() << " - Page: " << tid.get_page_id(table.sp_segment) << " - Slot: " << tid.get_slot() << "  :  ";
     char *current = read_buffer.data();
     for (auto &column: table.columns) {
         int integer;
@@ -133,11 +137,12 @@ std::optional<std::vector<std::string>> moderndbs::Database::read_tuple(const mo
         }
         std::cout << " | ";
     }
-    std::cout << std::endl;
+    std::cout << "\n";
+   latch.unlock();
     return values;
 }
 
-void moderndbs::Database::delete_tuple(const moderndbs::schema::Table &table, moderndbs::TID tid) {
+void moderndbs::Database::delete_tuple(const schema::Table &table, const TID tid){
     SPSegment &sp = *slotted_pages.at(table.sp_segment);
     sp.erase(tid);
     std::cout << "Tuple with TID " << tid.get_value() << " deleted!\n";

@@ -4,22 +4,15 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <iostream>
 
 namespace moderndbs {
 
 struct TID {
    public:
    /// Constructor.
-   explicit TID(uint64_t raw_value)
-      : value(raw_value) {}
+   explicit TID(const uint64_t raw_value) : value(raw_value) {}
    /// Constructor.
-   TID(uint64_t page, uint16_t slot)
-      : value((page << 16) ^ (slot & 0xFFFF)) {
-   }
+   TID(const uint64_t page, const uint16_t slot) : value((page << 16) ^ (slot & 0xFFFF)) {}
 
    /// Get buffer page id.
    [[nodiscard]] uint64_t get_page_id(uint16_t segment_id) const {
@@ -79,7 +72,7 @@ struct SlottedPage {
       [[nodiscard]] bool is_empty() const { return value == 0; }
 
       /// Set the slot.
-      void set_slot(uint32_t offset, uint32_t size, bool is_redirect_target) {
+      void set_slot(const uint32_t offset, const uint32_t size, const bool is_redirect_target) {
          value = 0;
          value ^= size & 0xFFFFFFull;
          value ^= (offset & 0xFFFFFFull) << 24;
