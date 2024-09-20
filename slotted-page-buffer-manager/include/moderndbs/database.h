@@ -43,7 +43,6 @@ namespace moderndbs {
         std::unordered_map<int16_t, std::unique_ptr<SPSegment>> slotted_pages;
         /// The segment of the schema's free space inventory
         std::unordered_map<int16_t, std::unique_ptr<FSISegment>> free_space_inventory;
-        std::shared_mutex latch;
     };
 
 } // namespace moderndbs

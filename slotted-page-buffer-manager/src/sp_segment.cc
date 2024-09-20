@@ -20,41 +20,41 @@ TID SPSegment::allocate(uint32_t size) {
     // The allocate method should use the free-space inventory to find a suitable page quickly.
     std::optional<uint64_t> page_with_free_space = fsi.find(size);
     if (page_with_free_space.has_value()) {
-        uint64_t page_id = page_with_free_space.value();
-        auto &page = buffer_manager.fix_page((static_cast<uint64_t>(segment_id) << 48) ^ page_id, true);
-        auto *page_data = page.get_data();
-        // If the page is already there, it's sufficient to use reinterpret_cast<SlottedPage*>
-        auto *slotted_page = reinterpret_cast<SlottedPage *>(page_data);
-        auto slot_id = slotted_page->allocate(size, buffer_manager.get_page_size());
-        // Unfix the page
-        buffer_manager.unfix_page(page, true);
-        // Update fsi
-        fsi.update(page_id, slotted_page->get_free_space());
+       uint64_t page_id = page_with_free_space.value();
+       auto& page = buffer_manager.fix_page((static_cast<uint64_t>(segment_id) << 48) ^ page_id, true);
+       auto* page_data = page.get_data();
+       // If the page is already there, it's sufficient to use reinterpret_cast<SlottedPage*>
+       auto* slotted_page = reinterpret_cast<SlottedPage*>(page_data);
+       auto slot_id = slotted_page->allocate(size, buffer_manager.get_page_size());
+       // Unfix the page
+       buffer_manager.unfix_page(page, true);
+       // Update fsi
+       fsi.update(page_id, slotted_page->get_free_space());
 
-        TID tid = TID(page_id, slot_id);
-        return tid;
-    } else {
-        // There is no available page that has enough space to hold data of "size" -> Create new slotted page
-        // Update Number of Slotted Pages
-        auto &first_page = buffer_manager.fix_page((static_cast<uint64_t>(segment_id) << 48), true);
-        auto &number_of_slots = *reinterpret_cast<uint64_t *>(first_page.get_data());
-        auto new_page_id = table.allocated_pages++; // Adjust number of allocated pages in Table
-        number_of_slots = table.allocated_pages;
-        buffer_manager.unfix_page(first_page, true);
-
-        auto &page = buffer_manager.fix_page((static_cast<uint64_t>(segment_id) << 48) ^ new_page_id, true);
-        auto *slotted_page = new(page.get_data()) SlottedPage(buffer_manager.get_page_size());
-
-        uint16_t slot_id = slotted_page->allocate(size, buffer_manager.get_page_size());
-        // Unfix the page
-        buffer_manager.unfix_page(page, true);
-        // update free_space_inventory
-        fsi.update(new_page_id, slotted_page->header.free_space);
-
-        // Returns a TID that stores the page as well as the slot of the allocated record.
-        TID tid = TID(new_page_id, slot_id);
-        return tid;
+       TID tid = TID(page_id, slot_id);
+       return tid;
     }
+
+    // There is no available page that has enough space to hold data of "size" -> Create new slotted page
+    // Update Number of Slotted Pages
+    auto& first_page = buffer_manager.fix_page((static_cast<uint64_t>(segment_id) << 48), true);
+    auto& number_of_slots = *reinterpret_cast<uint64_t*>(first_page.get_data());
+    auto new_page_id = table.allocated_pages++; // Adjust number of allocated pages in Table
+    number_of_slots = table.allocated_pages;
+    buffer_manager.unfix_page(first_page, true);
+
+    auto& page = buffer_manager.fix_page((static_cast<uint64_t>(segment_id) << 48) ^ new_page_id, true);
+    auto* slotted_page = new (page.get_data()) SlottedPage(buffer_manager.get_page_size());
+
+    uint16_t slot_id = slotted_page->allocate(size, buffer_manager.get_page_size());
+    // Unfix the page
+    buffer_manager.unfix_page(page, true);
+    // update free_space_inventory
+    fsi.update(new_page_id, slotted_page->header.free_space);
+
+    // Returns a TID that stores the page as well as the slot of the allocated record.
+    TID tid = TID(new_page_id, slot_id);
+    return tid;
 }
 
 std::optional<uint32_t> SPSegment::read(TID tid, std::byte *record, uint32_t capacity) const {

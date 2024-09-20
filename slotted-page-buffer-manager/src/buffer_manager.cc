@@ -204,16 +204,18 @@ BufferFrame& BufferManager::fix_page(uint64_t page_id, bool exclusive) {
    return *frame;
 }
 
-void BufferManager::unfix_page(BufferFrame& page, bool is_dirty) {
+void BufferManager::unfix_page(BufferFrame& page, const bool is_dirty) {
+   std::unique_lock lock(buffer_manager_mutex);
    if (page.is_exclusive) {
+      // buffer_manager_mutex.unlock();
       page.latch.unlock();
    } else {
+      // buffer_manager_mutex.unlock();
       page.latch.unlock_shared();
    }
+   // buffer_manager_mutex.lock();
    page.is_dirty = is_dirty;
    page.is_fixed = false;
-   std::unique_lock lock(buffer_manager_mutex);
-
    num_fixed_pages -= 1;
 }
 
