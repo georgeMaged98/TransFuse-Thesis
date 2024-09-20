@@ -175,45 +175,45 @@ void compareVectors(const std::vector<std::string> &vector1, const std::vector<s
 
 int main() {
    auto db = moderndbs::Database();
-   // {
-   //    moderndbs::FileMapper schema_file_mapper("schema_segment.txt", 1024);
-   //    moderndbs::SchemaSegment schema_segment(49, schema_file_mapper);
-   //    schema_segment.set_schema(moderndbs::getTPCHOrderSchema());
-   //    schema_segment.write();
-   // }
+   {
+      moderndbs::FileMapper schema_file_mapper("schema_segment.txt", 1024);
+      moderndbs::SchemaSegment schema_segment(49, schema_file_mapper);
+      schema_segment.set_schema(moderndbs::getTPCHOrderSchema());
+      schema_segment.write();
+   }
 
    db.load_schema(49);
    auto &table = db.get_schema().tables[0];
-   // std::vector<moderndbs::TID> tids;
-   // // Insert into table and read from it immediately
-   // for (uint64_t i = 0;i < 1500; ++i) {
-   //    auto values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
-   //    auto tid = db.insert(table, values);
-   //    tids.push_back(tid);
-   //    auto result = db.read_tuple(table, tid);
-   //    // ASSERT_TRUE(result);
-   //    // ASSERT_TRUE(compareVectors(values, result.value()));
-   // }
-   // // Now read inserted tids again
-   // for (uint64_t i = 0;i < 1500; ++i) {
-   //    auto expected_values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
-   //    auto result = db.read_tuple(table, tids[i]);
-   //    // ASSERT_TRUE(result);
-   //    // ASSERT_TRUE(compareVectors(expected_values, result.value()));
-   // }
-
-   std::mt19937_64 engine{0};
-   std::uniform_int_distribution<uint64_t> page{0, 39};
-   std::uniform_int_distribution<uint64_t> slot{0, 37};
-   for (int i = 0; i < 1000; ++i) {
-      uint64_t random_page = page(engine);
-      uint64_t random_slot = slot(engine);
-      auto tid = moderndbs::TID(random_page, random_slot);
-      // Alternatively, you could print them directly:
-      // std::cout << "RAND: " << random_value << " " << random_value2  << " \n";
-      // std::cout << "TID: " << tid.get_page_id(table.sp_segment) << " Slot: " <<tid.get_slot() << std::endl;
+   std::vector<moderndbs::TID> tids;
+   // Insert into table and read from it immediately
+   for (uint64_t i = 0;i < 50; ++i) {
+      auto values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
+      auto tid = db.insert(table, values);
+      tids.push_back(tid);
       auto result = db.read_tuple(table, tid);
+      // ASSERT_TRUE(result);
+      // ASSERT_TRUE(compareVectors(values, result.value()));
    }
+   // Now read inserted tids again
+   for (uint64_t i = 0;i < 50; ++i) {
+      auto expected_values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
+      auto result = db.read_tuple(table, tids[i]);
+      // ASSERT_TRUE(result);
+      // ASSERT_TRUE(compareVectors(expected_values, result.value()));
+   }
+
+   // std::mt19937_64 engine{0};
+   // std::uniform_int_distribution<uint64_t> page{0, 39};
+   // std::uniform_int_distribution<uint64_t> slot{0, 37};
+   // for (int i = 0; i < 1000; ++i) {
+   //    uint64_t random_page = page(engine);
+   //    uint64_t random_slot = slot(engine);
+   //    auto tid = moderndbs::TID(random_page, random_slot);
+   //    // Alternatively, you could print them directly:
+   //    // std::cout << "RAND: " << random_value << " " << random_value2  << " \n";
+   //    // std::cout << "TID: " << tid.get_page_id(table.sp_segment) << " Slot: " <<tid.get_slot() << std::endl;
+   //    auto result = db.read_tuple(table, tid);
+   // }
 
 
 }
