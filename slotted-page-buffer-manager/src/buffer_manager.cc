@@ -84,7 +84,7 @@ namespace moderndbs {
                 }
             }
 
-            // what if we don't have an unfixed one?????/
+            // what if we don't have an unfixed one?  -> buffer_manager_full_error is thrown earlier.
             this->lru_queue.erase(pos);
             this->lru_set.erase(evicted_page_id);
         }
@@ -96,7 +96,11 @@ namespace moderndbs {
             // If page is dirty, write it to disk:
             if (bf_to_be_deleted->is_dirty) {
                 // Write the Buffer Frame to disk
-                write_buffer_frame_to_file(bf_to_be_deleted);
+               buffer_manager_mutex.unlock();
+               // Note: The BufferFrame is locked at this point and no shared resource is used inside write_buffer_frame_to_file() function.
+               // We unlock directory (buffer_manager_mutex) here to avoid holding the lock during an expensive operation (Writing to disk)
+               write_buffer_frame_to_file(bf_to_be_deleted);
+               buffer_manager_mutex.lock();
             }
             this->hashtable.erase(ito);
         }
