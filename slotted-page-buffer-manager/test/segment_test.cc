@@ -68,7 +68,7 @@ struct SegmentTest : ::testing::Test {
    protected:
    void SetUp() override {
       using moderndbs::File;
-      for (const auto* segment_file : std::vector<const char*>{"0", "1", "10", "11", "20", "21", "30", "31"}) {
+      for (const auto* segment_file : std::vector<const char*>{"0", "1", "10", "11", "20", "21", "30", "31", "0.txt", "10.txt", "11.txt"}) {
          auto file = File::open_file(segment_file, File::Mode::WRITE);
          file->resize(0);
       }

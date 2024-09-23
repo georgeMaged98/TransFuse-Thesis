@@ -48,7 +48,7 @@ namespace moderndbs {
     class BufferManager {
     private:
         // mutex to lock shared resources in buffer manager
-        mutable std::mutex buffer_manager_mutex;
+        mutable std::shared_mutex buffer_manager_mutex;
         // hashtable of buffer frames
         std::unordered_map<uint64_t, std::shared_ptr<BufferFrame>> hashtable;
         // FIFO queue -> Double-ended queue to erase elements because it is not possible to remove element form middle of queue

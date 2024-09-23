@@ -130,10 +130,8 @@ namespace moderndbs {
 
     BufferFrame &BufferManager::fix_page(uint64_t page_id, bool exclusive) {
         // lock mutex
-        // std::unique_lock bf_lock(buffer_manager_mutex);
-       buffer_manager_mutex.lock();
+        std::unique_lock bf_lock(buffer_manager_mutex);
         if (this->num_fixed_pages == this->page_count) {
-           buffer_manager_mutex.unlock();
            throw buffer_full_error{};
         }
 
@@ -167,8 +165,8 @@ namespace moderndbs {
         BufferFrame *buffer_frame = this->find_buffer_frame_by_page_id(page_id);
         if (buffer_frame != nullptr) {
             buffer_frame->num_fixed += 1;
-            // bf_lock.unlock();
-           buffer_manager_mutex.unlock();
+            bf_lock.unlock();
+           // buffer_manager_mutex.unlock();
             if (exclusive) {
                 buffer_frame->latch.lock();
             } else {
@@ -184,48 +182,45 @@ namespace moderndbs {
         new_frame->data = std::make_unique<char[]>(this->page_size);
         new_frame->is_exclusive = exclusive;
         new_frame->num_fixed = 1;
+       // load page from disk if it is not in memory(NOT in Hashtable). Use segment id to read from disk & update data field in the BufferFrame
+       read_buffer_frame_from_file(page_id, *new_frame);
 
         // Update Hashtable
         hashtable.insert({page_id, new_frame});
 
         // bf_lock.unlock();
         auto frame = hashtable[page_id].get();
-       buffer_manager_mutex.unlock();
+       bf_lock.unlock();
         if (exclusive) {
             frame->latch.lock();
         } else {
             frame->latch.lock_shared();
         }
-       // load page from disk if it is not in memory(NOT in Hashtable). Use segment id to read from disk & update data field in the BufferFrame
-       read_buffer_frame_from_file(page_id, *new_frame);
 
         return *frame;
     }
 
     void BufferManager::unfix_page(BufferFrame &page, const bool is_dirty) {
-       // std::unique_lock bf_lock(buffer_manager_mutex);
-       buffer_manager_mutex.lock();
-       page.is_dirty = is_dirty;
-        page.num_fixed -= 1;
+       std::unique_lock bf_lock(buffer_manager_mutex);
        num_fixed_pages.fetch_sub(1ul);
+       page.is_dirty = is_dirty;
+       page.num_fixed -= 1;
+       bf_lock.unlock();
 
         if (page.is_exclusive) {
-           buffer_manager_mutex.unlock();
             page.latch.unlock();
         } else {
-           buffer_manager_mutex.unlock();
             page.latch.unlock_shared();
         }
-
     }
 
     std::vector<uint64_t> BufferManager::get_fifo_list() const {
-        std::unique_lock<std::mutex> lock(buffer_manager_mutex);
+        std::unique_lock lock(buffer_manager_mutex);
         return fifo_queue;
     }
 
     std::vector<uint64_t> BufferManager::get_lru_list() const {
-        std::unique_lock<std::mutex> lock(buffer_manager_mutex);
+        std::unique_lock lock(buffer_manager_mutex);
         return lru_queue;
     }
 

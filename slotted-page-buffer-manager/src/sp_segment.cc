@@ -25,7 +25,11 @@ TID SPSegment::allocate(uint32_t size) {
        auto* page_data = page.get_data();
        // If the page is already there, it's sufficient to use reinterpret_cast<SlottedPage*>
        auto* slotted_page = reinterpret_cast<SlottedPage*>(page_data);
+       std::cout << " Before Slot Allocation: "  << slotted_page->header.data_start << "\n";
+
        auto slot_id = slotted_page->allocate(size, buffer_manager.get_page_size());
+       std::cout << " After Slot Allocation: "  << slotted_page->header.data_start << "\n";
+
        // Unfix the page
        buffer_manager.unfix_page(page, true);
        // Update fsi
@@ -45,8 +49,11 @@ TID SPSegment::allocate(uint32_t size) {
 
     auto& page = buffer_manager.fix_page((static_cast<uint64_t>(segment_id) << 48) ^ new_page_id, true);
     auto* slotted_page = new (page.get_data()) SlottedPage(buffer_manager.get_page_size());
+   std::cout << " Before Slot Allocation (NEW): "  << slotted_page->header.data_start << "\n";
 
     uint16_t slot_id = slotted_page->allocate(size, buffer_manager.get_page_size());
+   std::cout << " After Slot Allocation (NEW): "  << slotted_page->header.data_start << "\n";
+
     // Unfix the page
     buffer_manager.unfix_page(page, true);
     // update free_space_inventory
@@ -92,22 +99,24 @@ uint32_t SPSegment::write(TID tid, std::byte *record, uint32_t record_size, bool
     auto &page = buffer_manager.fix_page(page_id, true);
     // If the page is already there, it's sufficient to use reinterpret_cast<SlottedPage*>
     auto &slotted_page = *reinterpret_cast<SlottedPage *>(page.get_data());
+   std::cout <<  "INSIDE SPSegment write Data Start " << slotted_page.header.data_start << "\n";
     auto &slot = slotted_page.get_slots()[tid.get_slot()];
     if (is_update && slot.is_empty()) {
         throw std::logic_error("TID Not Found!");
     }
 
     if (slot.is_redirect()) {
-        TID redirect_tid = slot.as_redirect_tid();
-        buffer_manager.unfix_page(page, true);
-        return write(redirect_tid, record, record_size);
-    } else {
-        uint32_t written_bytes = std::min(slot.get_size(), record_size);
-        auto offset = slot.get_offset(); // The place at which we write the data.
-        memcpy(slotted_page.get_data() + offset, record, written_bytes);
-        buffer_manager.unfix_page(page, true);
-        return written_bytes;
+       TID redirect_tid = slot.as_redirect_tid();
+       buffer_manager.unfix_page(page, true);
+       return write(redirect_tid, record, record_size);
     }
+
+    uint32_t written_bytes = std::min(slot.get_size(), record_size);
+    auto offset = slot.get_offset(); // The place at which we write the data.
+    std::cout << "WRITING at offset: " << offset << " and size : " << written_bytes << "\n";
+    memcpy(slotted_page.get_data() + offset, record, written_bytes);
+    buffer_manager.unfix_page(page, true);
+    return written_bytes;
 }
 
 void SPSegment::resize(TID tid, uint32_t new_length) {

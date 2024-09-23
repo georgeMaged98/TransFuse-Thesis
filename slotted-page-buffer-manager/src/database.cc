@@ -34,7 +34,7 @@ moderndbs::TID moderndbs::Database::insert(const schema::Table &table,
     SPSegment &sp = *slotted_pages.at(table.sp_segment);
     auto tid = sp.allocate(insert_buffer.size());
     sp.write(tid, reinterpret_cast<std::byte *>(insert_buffer.data()), insert_buffer.size());
-    std::cout << "Tuple with TID " << tid.get_value() << " inserted!\n";
+    std::cout << "Tuple with TID " << tid.get_value()  << " Page id: " << tid.get_page_id(table.sp_segment) <<  " Slot: " << tid.get_slot() << " inserted!\n";
     return tid;
 }
 
