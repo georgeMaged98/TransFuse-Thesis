@@ -56,12 +56,12 @@ namespace moderndbs {
         vector<uint64_t>::iterator pos;
         for (auto it = this->fifo_queue.begin(); it != this->fifo_queue.end(); it++) {
             auto bf = this->hashtable[*it].get();
-            if (bf->num_fixed <= 0 && !bf->is_dirty) {
+            if (bf->num_fixed == 0 && !bf->is_dirty) {
                 evicted_page_id = *it;
                 pos = it;
                 break;
             }
-            if (bf->num_fixed <= 0) {
+            if (bf->num_fixed == 0) {
                 evicted_page_id = *it;
                 pos = it;
             }
@@ -73,12 +73,12 @@ namespace moderndbs {
         } else { // EVICT first element in LRU queue
             for (auto it = this->lru_queue.begin(); it != this->lru_queue.end(); it++) {
                 auto bf = this->hashtable[*it].get();
-                if (bf->num_fixed <= 0 && !bf->is_dirty) {
+                if (bf->num_fixed == 0 && !bf->is_dirty) {
                     evicted_page_id = *it;
                     pos = it;
                     break;
                 }
-                if (bf->num_fixed <= 0) {
+                if (bf->num_fixed == 0) {
                     evicted_page_id = *it;
                     pos = it;
                 }
@@ -96,11 +96,11 @@ namespace moderndbs {
             // If page is dirty, write it to disk:
             if (bf_to_be_deleted->is_dirty) {
                 // Write the Buffer Frame to disk
-               buffer_manager_mutex.unlock();
-               // Note: The BufferFrame is locked at this point and no shared resource is used inside write_buffer_frame_to_file() function.
-               // We unlock directory (buffer_manager_mutex) here to avoid holding the lock during an expensive operation (Writing to disk)
-               write_buffer_frame_to_file(bf_to_be_deleted);
-               buffer_manager_mutex.lock();
+                buffer_manager_mutex.unlock();
+                // Note: The BufferFrame is locked at this point and no shared resource is used inside write_buffer_frame_to_file() function.
+                // We unlock directory (buffer_manager_mutex) here to avoid holding the lock during an expensive operation (Writing to disk)
+                write_buffer_frame_to_file(bf_to_be_deleted);
+                buffer_manager_mutex.lock();
             }
             this->hashtable.erase(ito);
         }
@@ -132,7 +132,7 @@ namespace moderndbs {
         // lock mutex
         std::unique_lock bf_lock(buffer_manager_mutex);
         if (this->num_fixed_pages == this->page_count) {
-           throw buffer_full_error{};
+            throw buffer_full_error{};
         }
 
         // Check if buffer manager is full
@@ -140,8 +140,8 @@ namespace moderndbs {
             // EVICT PAGE TO DISK
             evict_page();
         }
-        num_fixed_pages.fetch_add(1ul);
 
+        num_fixed_pages.fetch_add(1ul);
         // update FIFO queue if needed and // 5. update LRU queue if needed
         if (fifo_set.contains(page_id)) {
             auto posToBeDeleted = find(fifo_queue.begin(), fifo_queue.end(), page_id);
@@ -166,7 +166,6 @@ namespace moderndbs {
         if (buffer_frame != nullptr) {
             buffer_frame->num_fixed += 1;
             bf_lock.unlock();
-           // buffer_manager_mutex.unlock();
             if (exclusive) {
                 buffer_frame->latch.lock();
             } else {
@@ -177,36 +176,30 @@ namespace moderndbs {
 
         // Page with page_id not found
         std::shared_ptr<BufferFrame> new_frame = std::make_shared<BufferFrame>();
+        // Update Hashtable
+        hashtable.insert({page_id, new_frame});
+        auto frame = hashtable[page_id].get();
         new_frame->pageNo = page_id;
         new_frame->is_dirty = false;
         new_frame->data = std::make_unique<char[]>(this->page_size);
         new_frame->is_exclusive = exclusive;
         new_frame->num_fixed = 1;
-       // load page from disk if it is not in memory(NOT in Hashtable). Use segment id to read from disk & update data field in the BufferFrame
-       read_buffer_frame_from_file(page_id, *new_frame);
-
-        // Update Hashtable
-        hashtable.insert({page_id, new_frame});
-
-        // bf_lock.unlock();
-        auto frame = hashtable[page_id].get();
-       bf_lock.unlock();
+        bf_lock.unlock();
         if (exclusive) {
             frame->latch.lock();
         } else {
             frame->latch.lock_shared();
         }
-
+        // load page from disk if it is not in memory(NOT in Hashtable). Use segment id to read from disk & update data field in the BufferFrame
+        read_buffer_frame_from_file(page_id, *new_frame);
         return *frame;
     }
 
     void BufferManager::unfix_page(BufferFrame &page, const bool is_dirty) {
-       std::unique_lock bf_lock(buffer_manager_mutex);
-       num_fixed_pages.fetch_sub(1ul);
-       page.is_dirty = is_dirty;
-       page.num_fixed -= 1;
-       bf_lock.unlock();
-
+        std::unique_lock bf_lock(buffer_manager_mutex);
+        num_fixed_pages.fetch_sub(1ul);
+        page.is_dirty = is_dirty;
+        page.num_fixed -= 1;
         if (page.is_exclusive) {
             page.latch.unlock();
         } else {
