@@ -53,7 +53,6 @@ uint32_t SlottedPage::get_fragmented_free_space() {
 }
 
 uint16_t SlottedPage::allocate(uint32_t data_size, uint32_t page_size) {
-   std:: cout << "Data Size: " << data_size << std::endl;
     // TODO: add your implementation here
     if (get_free_space() < data_size) {
         throw std::logic_error{"not enough free space"};
@@ -65,21 +64,16 @@ uint16_t SlottedPage::allocate(uint32_t data_size, uint32_t page_size) {
 
     // Update Header attributes
     auto slot_id = header.first_free_slot;
-    std:: cout << "Data Start " << header.data_start << std::endl;
     // Update data_start -> It should be (old data start - data_size)
     header.data_start -= data_size;
-   std:: cout << "Data Start After Calculation: " << header.data_start << std::endl;
     // Update free_space -> It should be (old free space - data_size) , WE MIGHT NEED (page_size).
     //WE subtract slot_size if we are adding a new slot. But if we are reusing an old slot, we don't subtract slot size again.
     header.free_space -= data_size;
 
     // Get Slot from slots array
     auto &slot = get_slots()[slot_id];
-   std::cout << "Just before setting slot: " << header.data_start << " Data size: " << data_size << "\n";
     // Set new Slot attributes
     slot.set_slot(header.data_start, data_size, false);
-   std::cout << "AFTER setting slot: " << header.data_start << " Data size: " << data_size << "\n";
-
     // Update First Free Slot -> Iterate over slot array until the first NON-empty slot to consider erased entries
     // When an entry is erased, the first free slot becomes in the middle.
     // Hence, if we need to search for the following NON-empty slot or if the current slot_count was equal to first free slot,

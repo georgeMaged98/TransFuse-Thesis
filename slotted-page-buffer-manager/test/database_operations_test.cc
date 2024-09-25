@@ -196,39 +196,40 @@ TEST_F(DatabaseOperationsTest, MultithreadWriters) {
    auto &table = db.get_schema().tables[0];
    // Pre-allocate the tids vector to the correct size
    std::vector<moderndbs::TID> tids;
-   uint32_t insertions_per_thread = 10;
+   uint32_t insertions_per_thread = 500;
    tids.reserve(4 * insertions_per_thread); // 4 threads
 
    std::barrier sync_point(4);
    std::vector<std::thread> threads;
    // std::mutex tids_mutex;
+   std::vector<std::vector<moderndbs::TID>> tids_per_thread(4);
 
    for (size_t thread = 0; thread < 4; ++thread) {
-      threads.emplace_back([thread, &sync_point, &table, &db, &tids, insertions_per_thread] {
+      threads.emplace_back([thread, &sync_point, &table, &db, &tids_per_thread, insertions_per_thread] {
          size_t startValue = thread * insertions_per_thread;
          size_t limit = startValue + insertions_per_thread;
          // Insert values
-         for (auto i = startValue; i < limit; ++i) {
+         for (auto i = 0; i < insertions_per_thread; ++i) {
             // std::lock_guard<std::mutex> lock(tids_mutex);
             auto values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
             // printVector(values);
             auto tid = db.insert(table, values);
-            // tids[startValue + (i - startValue)] = tid;
+            tids_per_thread[thread].push_back(tid);
          }
 
          sync_point.arrive_and_wait();
 
-         // // And read them back
-         // for (auto i = startValue; i < limit; ++i) {
-         //    // std::lock_guard<std::mutex> lock(tids_mutex);
-         //    auto expected_values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
-         //    auto tid = tids[startValue + (i - startValue)];
-         //    // printVector(expected_values);
-         //    auto result = db.read_tuple(table, tid);
-         //    // printVector(result.value());
-         //    ASSERT_TRUE(result);
-         //    ASSERT_TRUE(compareVectors(expected_values, result.value()));
-         // }
+         // And read them back
+         for (auto i = 0; i < insertions_per_thread; ++i) {
+            // std::lock_guard<std::mutex> lock(tids_mutex);
+            auto expected_values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
+            auto tid = tids_per_thread[thread][i];
+            // printVector(expected_values);
+            auto result = db.read_tuple(table, tid);
+            // printVector(result.value());
+            ASSERT_TRUE(result);
+            ASSERT_TRUE(compareVectors(expected_values, result.value()));
+         }
       });
    }
 

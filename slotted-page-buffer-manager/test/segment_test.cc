@@ -363,26 +363,26 @@ TEST_F(SegmentTest, SPRecordErase) {
 
    // Get the page
    auto page_id = tid.get_page_id(table.sp_segment);
-   auto* frame = &buffer_manager.fix_page(page_id, true);
+   auto frame = buffer_manager.fix_page(page_id, true);
    auto* page = reinterpret_cast<SlottedPage*>(frame->get_data());
    ASSERT_EQ(page->header.slot_count, 1);
    ASSERT_EQ(page->header.first_free_slot, 1);
    ASSERT_EQ(page->header.free_space, 0);
    ASSERT_EQ(page->header.data_start, sizeof(SlottedPage::Header) + sizeof(SlottedPage::Slot));
-   buffer_manager.unfix_page(*frame, true);
+   buffer_manager.unfix_page(frame, true);
 
    // Erase the slot
    sp_segment.erase(tid);
 
    // Reload the page
    page_id = tid.get_page_id(table.sp_segment);
-   frame = &buffer_manager.fix_page(page_id, true);
+   frame = buffer_manager.fix_page(page_id, true);
    page = reinterpret_cast<SlottedPage*>(frame->get_data());
    ASSERT_EQ(page->header.slot_count, 0);
    ASSERT_EQ(page->header.first_free_slot, 0);
    ASSERT_EQ(page->header.free_space, 1024 - sizeof(SlottedPage::Header));
    ASSERT_EQ(page->header.data_start, 1024);
-   buffer_manager.unfix_page(*frame, true);
+   buffer_manager.unfix_page(frame, true);
 }
 
 // NOLINTNEXTLINE

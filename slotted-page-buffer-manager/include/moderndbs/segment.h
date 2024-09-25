@@ -102,6 +102,8 @@ namespace moderndbs {
         /// The table
         schema::Table &table;
         std::vector<uint8_t> fsi_bitmap;
+       /// latch
+       std::mutex fsi_mutex;
     };
 
     class SPSegment : public moderndbs::Segment {

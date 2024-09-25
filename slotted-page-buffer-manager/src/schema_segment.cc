@@ -18,8 +18,8 @@ namespace json = rapidjson;
 
 namespace {
 
-struct StreamBuffer: std::streambuf {
-   explicit StreamBuffer(std::vector<std::byte> &buffer) {
+struct StreamBuffer : std::streambuf {
+   explicit StreamBuffer(std::vector<std::byte>& buffer) {
       auto* begin = reinterpret_cast<char*>(buffer.data());
       auto* end = reinterpret_cast<char*>(buffer.data() + buffer.size());
       this->setg(begin, begin, end);
@@ -27,12 +27,12 @@ struct StreamBuffer: std::streambuf {
 };
 
 // NOLINTNEXTLINE
-const std::unordered_map<std::string, Type::Class> types {
-   { "char", Type::kChar },
-   { "integer", Type::kInteger },
+const std::unordered_map<std::string, Type::Class> types{
+   {"char", Type::kChar},
+   {"integer", Type::kInteger},
 };
 
-}  // namespace
+} // namespace
 
 SchemaSegment::SchemaSegment(
    uint16_t segment_id, BufferManager& buffer_manager)
@@ -45,8 +45,8 @@ SchemaSegment::~SchemaSegment() {
 
 void SchemaSegment::read() {
    // Load the first page
-   auto& page = buffer_manager.fix_page(static_cast<uint64_t>(segment_id) << 48, false);
-   auto* page_data = page.get_data();
+   auto page = buffer_manager.fix_page(static_cast<uint64_t>(segment_id) << 48, false);
+   auto* page_data = page->get_data();
    auto page_size = buffer_manager.get_page_size();
 
    // [0-8[   : Schema string length in #bytes
@@ -69,9 +69,9 @@ void SchemaSegment::read() {
 
    // Read all other schema pages
    for (int pid = 1; remaining_bytes > 0; pid++) {
-      auto &page = buffer_manager.fix_page((static_cast<uint64_t>(segment_id) << 48) ^ pid, false);
+      auto page = buffer_manager.fix_page((static_cast<uint64_t>(segment_id) << 48) ^ pid, false);
 
-      auto* page_data = page.get_data();
+      auto* page_data = page->get_data();
       auto n = std::min<size_t>(remaining_bytes, page_size);
       std::memcpy(&buffer[buffer_offset], page_data, n);
       buffer_offset += n;
@@ -90,14 +90,14 @@ void SchemaSegment::read() {
    // Parse the schema
    std::vector<Table> tables;
    if (document.HasMember("tables") && document["tables"].IsArray()) {
-      for (auto &table : document["tables"].GetArray()) {
+      for (auto& table : document["tables"].GetArray()) {
          const auto* id = table.HasMember("id") ? table["id"].GetString() : "?";
          auto sp_segment = table.HasMember("sp_segment") ? table["sp_segment"].GetInt() : -1;
          auto fsi_segment = table.HasMember("fsi_segment") ? table["fsi_segment"].GetInt() : -1;
          auto allocated_pages = table.HasMember("allocated_pages") ? table["allocated_pages"].GetInt() : -1;
          std::vector<Column> columns;
          if (table.HasMember("columns") && table["columns"].IsArray()) {
-            for (auto &col : table["columns"].GetArray()) {
+            for (auto& col : table["columns"].GetArray()) {
                std::string id = col.HasMember("id") ? col["id"].GetString() : "?";
                Type t;
                if (col.HasMember("type")) {
@@ -116,7 +116,7 @@ void SchemaSegment::read() {
          }
          std::vector<std::string> primary_key;
          if (table.HasMember("primary_key") && table["primary_key"].IsArray()) {
-            for (auto &pk : table["primary_key"].GetArray()) {
+            for (auto& pk : table["primary_key"].GetArray()) {
                primary_key.emplace_back(pk.GetString());
             }
          }
@@ -128,8 +128,8 @@ void SchemaSegment::read() {
 
 void SchemaSegment::write() {
    // Load the first page
-   auto& page = buffer_manager.fix_page(static_cast<uint64_t>(segment_id) << 48, true);
-   auto* page_data = page.get_data();
+   auto page = buffer_manager.fix_page(static_cast<uint64_t>(segment_id) << 48, true);
+   auto* page_data = page->get_data();
    auto page_size = buffer_manager.get_page_size();
 
    // [0-8[   : Schema string length in #bytes
@@ -144,11 +144,11 @@ void SchemaSegment::write() {
    {
       // Prepare document
       json::Document doc(json::kObjectType);
-      auto &allocator = doc.GetAllocator();
+      auto& allocator = doc.GetAllocator();
 
       // Write tables
       json::Value tables(json::kArrayType);
-      for (auto &table : schema->tables) {
+      for (auto& table : schema->tables) {
          json::Value t(json::kObjectType);
 
          // id
@@ -162,7 +162,7 @@ void SchemaSegment::write() {
 
          // Write columns
          json::Value columns(json::kArrayType);
-         for (const auto &col: table.columns) {
+         for (const auto& col : table.columns) {
             // id
             json::Value column(json::kObjectType);
             column.AddMember("id", json::StringRef(col.id.c_str()), allocator);
@@ -181,7 +181,7 @@ void SchemaSegment::write() {
 
          // Write primary key
          json::Value primary_key(json::kArrayType);
-         for (const auto &pk: table.primary_key) {
+         for (const auto& pk : table.primary_key) {
             primary_key.PushBack(json::StringRef(pk.c_str()), allocator);
          }
          t.AddMember("primary_key", primary_key, allocator);
@@ -196,7 +196,7 @@ void SchemaSegment::write() {
    }
 
    // Get data
-   const char *json_str = buffer.GetString();
+   const char* json_str = buffer.GetString();
    uint64_t schema_size = buffer.GetSize();
    *reinterpret_cast<uint64_t*>(page_data) = schema_size;
 
@@ -214,9 +214,9 @@ void SchemaSegment::write() {
 
    // Write all other schema pages
    for (int pid = 1; remaining_bytes > 0; pid++) {
-      auto &page = buffer_manager.fix_page((static_cast<uint64_t>(segment_id) << 48) ^ pid, true);
+      auto page = buffer_manager.fix_page((static_cast<uint64_t>(segment_id) << 48) ^ pid, true);
 
-      auto* page_data = page.get_data();
+      auto* page_data = page->get_data();
       auto n = std::min<size_t>(remaining_bytes, page_size);
       std::memcpy(page_data, json_str + buffer_offset, n);
       buffer_offset += n;

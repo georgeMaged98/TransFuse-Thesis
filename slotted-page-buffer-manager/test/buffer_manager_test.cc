@@ -16,17 +16,17 @@ TEST(BufferManagerTest, FixSingle) {
     moderndbs::BufferManager buffer_manager{1024, 10};
     std::vector<uint64_t> expected_values(1024 / sizeof(uint64_t), 123);
     {
-        auto& page = buffer_manager.fix_page(1, true);
-        ASSERT_TRUE(page.get_data());
-        std::memcpy(page.get_data(), expected_values.data(), 1024);
+        auto page = buffer_manager.fix_page(1, true);
+        ASSERT_TRUE(page->get_data());
+        std::memcpy(page->get_data(), expected_values.data(), 1024);
         buffer_manager.unfix_page(page, true);
         EXPECT_EQ(std::vector<uint64_t>{1}, buffer_manager.get_fifo_list());
         EXPECT_TRUE(buffer_manager.get_lru_list().empty());
     }
     {
         std::vector<uint64_t> values(1024 / sizeof(uint64_t));
-        auto& page = buffer_manager.fix_page(1, false);
-        std::memcpy(values.data(), page.get_data(), 1024);
+        auto page = buffer_manager.fix_page(1, false);
+        std::memcpy(values.data(), page->get_data(), 1024);
         buffer_manager.unfix_page(page, true);
         EXPECT_TRUE(buffer_manager.get_fifo_list().empty());
         EXPECT_EQ(std::vector<uint64_t>{1}, buffer_manager.get_lru_list());
@@ -41,9 +41,9 @@ TEST(BufferManagerTest, PersistentRestart) {
     for (uint16_t segment = 0; segment < 3; ++segment) {
         for (uint64_t segment_page = 0; segment_page < 10; ++segment_page) {
             uint64_t page_id = (static_cast<uint64_t>(segment) << 48) | segment_page;
-            auto& page = buffer_manager->fix_page(page_id, true);
-            ASSERT_TRUE(page.get_data());
-            uint64_t& value = *reinterpret_cast<uint64_t*>(page.get_data());
+            auto page = buffer_manager->fix_page(page_id, true);
+            ASSERT_TRUE(page->get_data());
+            uint64_t& value = *reinterpret_cast<uint64_t*>(page->get_data());
             value = segment * 10 + segment_page;
             buffer_manager->unfix_page(page, true);
         }
@@ -53,9 +53,9 @@ TEST(BufferManagerTest, PersistentRestart) {
     for (uint16_t segment = 0; segment < 3; ++segment) {
         for (uint64_t segment_page = 0; segment_page < 10; ++segment_page) {
             uint64_t page_id = (static_cast<uint64_t>(segment) << 48) | segment_page;
-            auto& page = buffer_manager->fix_page(page_id, false);
-            ASSERT_TRUE(page.get_data());
-            uint64_t value = *reinterpret_cast<uint64_t*>(page.get_data());
+            auto page = buffer_manager->fix_page(page_id, false);
+            ASSERT_TRUE(page->get_data());
+            uint64_t value = *reinterpret_cast<uint64_t*>(page->get_data());
             buffer_manager->unfix_page(page, false);
             EXPECT_EQ(segment * 10 + segment_page, value);
         }
@@ -67,7 +67,7 @@ TEST(BufferManagerTest, PersistentRestart) {
 TEST(BufferManagerTest, FIFOEvict) {
     moderndbs::BufferManager buffer_manager{1024, 10};
     for (uint64_t i = 1; i < 11; ++i) {
-        auto& page = buffer_manager.fix_page(i, false);
+        auto page = buffer_manager.fix_page(i, false);
         buffer_manager.unfix_page(page, false);
     }
     {
@@ -76,7 +76,7 @@ TEST(BufferManagerTest, FIFOEvict) {
         EXPECT_TRUE(buffer_manager.get_lru_list().empty());
     }
     {
-        auto& page = buffer_manager.fix_page(11, false);
+        auto page = buffer_manager.fix_page(11, false);
         buffer_manager.unfix_page(page, false);
     }
     {
@@ -90,16 +90,16 @@ TEST(BufferManagerTest, FIFOEvict) {
 // NOLINTNEXTLINE
 TEST(BufferManagerTest, BufferFull) {
     moderndbs::BufferManager buffer_manager{1024, 10};
-    std::vector<moderndbs::BufferFrame*> pages;
+    std::vector<std::shared_ptr<moderndbs::BufferFrame>> pages;
     pages.reserve(10);
     for (uint64_t i = 1; i < 11; ++i) {
-        auto& page = buffer_manager.fix_page(i, false);
-        pages.push_back(&page);
+        auto page = buffer_manager.fix_page(i, false);
+        pages.push_back(page);
     }
     // NOLINTNEXTLINE
     EXPECT_THROW(buffer_manager.fix_page(11, false), moderndbs::buffer_full_error); //
-    for (auto* page : pages) {
-        buffer_manager.unfix_page(*page, false);
+    for (auto page : pages) {
+        buffer_manager.unfix_page(page, false);
     }
 }
 
@@ -107,14 +107,14 @@ TEST(BufferManagerTest, BufferFull) {
 // NOLINTNEXTLINE
 TEST(BufferManagerTest, MoveToLRU) {
     moderndbs::BufferManager buffer_manager{1024, 10};
-    auto& fifo_page = buffer_manager.fix_page(1, false);
-    auto* lru_page = &buffer_manager.fix_page(2, false);
+    auto fifo_page = buffer_manager.fix_page(1, false);
+    auto lru_page = buffer_manager.fix_page(2, false);
     buffer_manager.unfix_page(fifo_page, false);
-    buffer_manager.unfix_page(*lru_page, false);
+    buffer_manager.unfix_page(lru_page, false);
     EXPECT_EQ((std::vector<uint64_t>{1, 2}), buffer_manager.get_fifo_list());
     EXPECT_TRUE(buffer_manager.get_lru_list().empty());
-    lru_page = &buffer_manager.fix_page(2, false);
-    buffer_manager.unfix_page(*lru_page, false);
+    lru_page = buffer_manager.fix_page(2, false);
+    buffer_manager.unfix_page(lru_page, false);
     EXPECT_EQ(std::vector<uint64_t>{1}, buffer_manager.get_fifo_list());
     EXPECT_EQ(std::vector<uint64_t>{2}, buffer_manager.get_lru_list());
 }
@@ -123,18 +123,18 @@ TEST(BufferManagerTest, MoveToLRU) {
 // NOLINTNEXTLINE
 TEST(BufferManagerTest, LRURefresh) {
     moderndbs::BufferManager buffer_manager{1024, 10};
-    auto* page1 = &buffer_manager.fix_page(1, false);
-    buffer_manager.unfix_page(*page1, false);
-    page1 = &buffer_manager.fix_page(1, false);
-    buffer_manager.unfix_page(*page1, false);
-    auto* page2 = &buffer_manager.fix_page(2, false);
-    buffer_manager.unfix_page(*page2, false);
-    page2 = &buffer_manager.fix_page(2, false);
-    buffer_manager.unfix_page(*page2, false);
+    auto page1 = buffer_manager.fix_page(1, false);
+    buffer_manager.unfix_page(page1, false);
+    page1 = buffer_manager.fix_page(1, false);
+    buffer_manager.unfix_page(page1, false);
+    auto page2 = buffer_manager.fix_page(2, false);
+    buffer_manager.unfix_page(page2, false);
+    page2 = buffer_manager.fix_page(2, false);
+    buffer_manager.unfix_page(page2, false);
     EXPECT_TRUE(buffer_manager.get_fifo_list().empty());
     EXPECT_EQ((std::vector<uint64_t>{1, 2}), buffer_manager.get_lru_list());
-    page1 = &buffer_manager.fix_page(1, false);
-    buffer_manager.unfix_page(*page1, false);
+    page1 = buffer_manager.fix_page(1, false);
+    buffer_manager.unfix_page(page1, false);
     EXPECT_TRUE(buffer_manager.get_fifo_list().empty());
     EXPECT_EQ((std::vector<uint64_t>{2, 1}), buffer_manager.get_lru_list());
 }
@@ -148,8 +148,8 @@ TEST(BufferManagerTest, MultithreadParallelFix) {
         threads.emplace_back([i, &buffer_manager] {
             // NOLINTNEXTLINE
             ASSERT_NO_THROW(
-                auto& page1 = buffer_manager.fix_page(i, false);
-                auto& page2 = buffer_manager.fix_page(i + 4, false);
+                auto page1 = buffer_manager.fix_page(i, false);
+                auto page2 = buffer_manager.fix_page(i + 4, false);
                 buffer_manager.unfix_page(page1, false);
                 buffer_manager.unfix_page(page2, false);
             );
@@ -170,18 +170,18 @@ TEST(BufferManagerTest, MultithreadParallelFix) {
 TEST(BufferManagerTest, MultithreadExclusiveAccess) {
     moderndbs::BufferManager buffer_manager{1024, 10};
     {
-        auto& page = buffer_manager.fix_page(0, true);
-        ASSERT_TRUE(page.get_data());
-        std::memset(page.get_data(), 0, 1024);
+        auto page = buffer_manager.fix_page(0, true);
+        ASSERT_TRUE(page->get_data());
+        std::memset(page->get_data(), 0, 1024);
         buffer_manager.unfix_page(page, true);
     }
     std::vector<std::thread> threads;
     for (size_t i = 0; i < 4; ++i) {
         threads.emplace_back([&buffer_manager] {
             for (size_t j = 0; j < 1000; ++j) {
-                auto& page = buffer_manager.fix_page(0, true);
-                ASSERT_TRUE(page.get_data());
-                uint64_t& value = *reinterpret_cast<uint64_t*>(page.get_data());
+                auto page = buffer_manager.fix_page(0, true);
+                ASSERT_TRUE(page->get_data());
+                uint64_t& value = *reinterpret_cast<uint64_t*>(page->get_data());
                 ++value;
                 buffer_manager.unfix_page(page, true);
             }
@@ -192,9 +192,9 @@ TEST(BufferManagerTest, MultithreadExclusiveAccess) {
     }
     EXPECT_TRUE(buffer_manager.get_fifo_list().empty());
     EXPECT_EQ(std::vector<uint64_t>{0}, buffer_manager.get_lru_list());
-    auto& page = buffer_manager.fix_page(0, false);
-    ASSERT_TRUE(page.get_data());
-    uint64_t value = *reinterpret_cast<uint64_t*>(page.get_data());
+    auto page = buffer_manager.fix_page(0, false);
+    ASSERT_TRUE(page->get_data());
+    uint64_t value = *reinterpret_cast<uint64_t*>(page->get_data());
     buffer_manager.unfix_page(page, false);
     EXPECT_EQ(4000, value);
 }
@@ -203,9 +203,9 @@ TEST(BufferManagerTest, MultithreadExclusiveAccess) {
 TEST(BufferManagerTest, BlockedThreadsHoldsNoLocks) {
   moderndbs::BufferManager buffer_manager{1024, 10};
   for (size_t i = 0; i < 2; ++i ){
-    auto& page = buffer_manager.fix_page(i, true);
-    ASSERT_TRUE(page.get_data());
-    std::memset(page.get_data(), 0, 1024);
+    auto page = buffer_manager.fix_page(i, true);
+    ASSERT_TRUE(page->get_data());
+    std::memset(page->get_data(), 0, 1024);
     buffer_manager.unfix_page(page, true);
   }
   auto blockedCv = std::condition_variable();
@@ -214,10 +214,10 @@ TEST(BufferManagerTest, BlockedThreadsHoldsNoLocks) {
   std::atomic<bool> isBlocked = false;
   auto blocking = std::thread([&] {
     auto lock = std::unique_lock(cvMutex);
-    auto& page = buffer_manager.fix_page(0, true);
+    auto page = buffer_manager.fix_page(0, true);
     isBlocked = true;
     blockedCv.notify_all();
-    uint64_t& value = *reinterpret_cast<uint64_t*>(page.get_data());
+    uint64_t& value = *reinterpret_cast<uint64_t*>(page->get_data());
     ++value;
     blockingCv.wait(lock);
     ASSERT_EQ(value, 1);
@@ -230,8 +230,8 @@ TEST(BufferManagerTest, BlockedThreadsHoldsNoLocks) {
     }
     lock.unlock();
 
-    auto& page = buffer_manager.fix_page(0, true);
-    uint64_t& value = *reinterpret_cast<uint64_t*>(page.get_data());
+    auto page = buffer_manager.fix_page(0, true);
+    uint64_t& value = *reinterpret_cast<uint64_t*>(page->get_data());
     ASSERT_EQ(value, 1);
     buffer_manager.unfix_page(page, false);
   });
@@ -248,9 +248,9 @@ TEST(BufferManagerTest, BlockedThreadsHoldsNoLocks) {
     threads.emplace_back([&buffer_manager] {
       for (size_t j = 0; j < 1000; ++j) {
         // Threads operating on page 1 should not be blocked by the blocking thread opn page 0
-        auto& page = buffer_manager.fix_page(1, false);
-        ASSERT_TRUE(page.get_data());
-        uint64_t& value = *reinterpret_cast<uint64_t*>(page.get_data());
+        auto page = buffer_manager.fix_page(1, false);
+        ASSERT_TRUE(page->get_data());
+        uint64_t& value = *reinterpret_cast<uint64_t*>(page->get_data());
         ASSERT_EQ(value, 0);
         buffer_manager.unfix_page(page, false);
       }
@@ -273,11 +273,11 @@ TEST(BufferManagerTest, MultithreadBufferFull) {
     std::vector<std::thread> threads;
     for (size_t i = 0; i < 4; ++i) {
         threads.emplace_back([i, &buffer_manager, &num_buffer_full, &finished_threads] {
-            std::vector<moderndbs::BufferFrame*> pages;
+            std::vector<std::shared_ptr<moderndbs::BufferFrame>> pages;
             pages.reserve(4);
             for (size_t j = 0; j < 4; ++j) {
                 try {
-                    pages.push_back(&buffer_manager.fix_page(i + j * 4, false));
+                    pages.push_back(buffer_manager.fix_page(i + j * 4, false));
                 } catch (const moderndbs::buffer_full_error&) {
                     ++num_buffer_full;
                 }
@@ -285,8 +285,8 @@ TEST(BufferManagerTest, MultithreadBufferFull) {
             ++finished_threads;
             // Busy wait until all threads have finished.
             while (finished_threads.load() < 4) {}
-            for (auto* page : pages) {
-                buffer_manager.unfix_page(*page, false);
+            for (auto page : pages) {
+                buffer_manager.unfix_page(page, false);
             }
         });
     }
@@ -309,7 +309,7 @@ TEST(BufferManagerTest, MultithreadManyPages) {
             std::geometric_distribution<uint64_t> distr{0.1};
             for (size_t j = 0; j < 10000; ++j) {
                 ASSERT_NO_THROW(
-                    auto& page = buffer_manager.fix_page(distr(engine), false);
+                    auto page = buffer_manager.fix_page(distr(engine), false);
                     buffer_manager.unfix_page(page, false);
                 );
             }
@@ -329,9 +329,9 @@ TEST(BufferManagerTest, MultithreadReaderWriter) {
         for (uint16_t segment = 0; segment <= 3; ++segment) {
             for (uint64_t segment_page = 0; segment_page <= 100; ++segment_page) {
                 uint64_t page_id = (static_cast<uint64_t>(segment) << 48) | segment_page;
-                auto& page = buffer_manager.fix_page(page_id, true);
-                ASSERT_TRUE(page.get_data());
-                std::memset(page.get_data(), 0, 1024);
+                auto page = buffer_manager.fix_page(page_id, true);
+                ASSERT_TRUE(page->get_data());
+                std::memset(page->get_data(), 0, 1024);
                 buffer_manager.unfix_page(page, true);
             }
         }
@@ -366,10 +366,10 @@ TEST(BufferManagerTest, MultithreadReaderWriter) {
                     uint64_t scan_sum = 0;
                     for (uint64_t segment_page = 0; segment_page <= 100; ++segment_page) {
                         uint64_t page_id = segment_shift | segment_page;
-                        moderndbs::BufferFrame* page = nullptr;
+                        std::shared_ptr<moderndbs::BufferFrame> page = nullptr;
                         while (true) {
                             try {
-                                page = &buffer_manager.fix_page(page_id, false);
+                                page = buffer_manager.fix_page(page_id, false);
                                 break;
                             } catch (const moderndbs::buffer_full_error&) {
                                 // Don't abort scan when the buffer is full, retry
@@ -379,7 +379,7 @@ TEST(BufferManagerTest, MultithreadReaderWriter) {
                         ASSERT_TRUE(page->get_data());
                         uint64_t value = *reinterpret_cast<uint64_t*>(page->get_data());
                         scan_sum += value;
-                        buffer_manager.unfix_page(*page, false);
+                        buffer_manager.unfix_page(page, false);
                     }
                     EXPECT_GE(scan_sum, scan_sums[segment]);
                     scan_sums[segment] = scan_sum;
@@ -390,10 +390,10 @@ TEST(BufferManagerTest, MultithreadReaderWriter) {
                     // reads. Only the last is potentially a write. Also,
                     // all pages but the last are held for the entire duration
                     // of the query.
-                    std::vector<moderndbs::BufferFrame*> pages;
+                    std::vector<std::shared_ptr<moderndbs::BufferFrame>> pages;
                     auto unfix_pages = [&] {
                         for (auto it = pages.rbegin(); it != pages.rend(); ++it) {
-                            auto& page = **it;
+                            auto page = *it;
                             buffer_manager.unfix_page(page, false);
                         }
                         pages.clear();
@@ -401,9 +401,9 @@ TEST(BufferManagerTest, MultithreadReaderWriter) {
                     for (size_t page_number = 0; page_number < num_pages - 1; ++page_number) {
                         uint64_t segment_page = page_distr(engine);
                         uint64_t page_id = segment_shift | segment_page;
-                        moderndbs::BufferFrame* page = nullptr;
+                        std::shared_ptr<moderndbs::BufferFrame> page = nullptr;
                         try {
-                            page = &buffer_manager.fix_page(page_id, false);
+                            page = buffer_manager.fix_page(page_id, false);
                         } catch (const moderndbs::buffer_full_error&) {
                             // Abort query when buffer is full.
                             ++aborts;
@@ -419,19 +419,19 @@ TEST(BufferManagerTest, MultithreadReaderWriter) {
                         uint64_t page_id = segment_shift | segment_page;
                         if (reads_distr(engine)) {
                             // read
-                            moderndbs::BufferFrame* page = nullptr;
+                            std::shared_ptr<moderndbs::BufferFrame> page = nullptr;
                             try {
-                                page = &buffer_manager.fix_page(page_id, false);
+                                page = buffer_manager.fix_page(page_id, false);
                             } catch (const moderndbs::buffer_full_error&) {
                                 ++aborts;
                                 goto abort;
                             }
-                            buffer_manager.unfix_page(*page, false);
+                            buffer_manager.unfix_page(page, false);
                         } else {
                             // write
-                            moderndbs::BufferFrame* page = nullptr;
+                            std::shared_ptr<moderndbs::BufferFrame> page = nullptr;
                             try {
-                                page = &buffer_manager.fix_page(page_id, true);
+                                page = buffer_manager.fix_page(page_id, true);
                             } catch (const moderndbs::buffer_full_error&) {
                                 ++aborts;
                                 goto abort;
@@ -439,7 +439,7 @@ TEST(BufferManagerTest, MultithreadReaderWriter) {
                             ASSERT_TRUE(page->get_data());
                             auto& value = *reinterpret_cast<uint64_t*>(page->get_data());
                             ++value;
-                            buffer_manager.unfix_page(*page, true);
+                            buffer_manager.unfix_page(page, true);
                         }
                     }
                     abort:
