@@ -8,6 +8,13 @@
 
 namespace moderndbs {
 
+struct OrderRecord {
+    uint64_t o_orderkey;
+    uint64_t o_custkey;
+    uint64_t o_totalprice;
+    uint64_t o_shippriority;
+    char o_orderstatus;
+};
     class Database {
     public:
         /// Constructor.
@@ -23,16 +30,16 @@ namespace moderndbs {
         schema::Schema &get_schema();
 
         /// Insert into a table
-        TID insert(const schema::Table &table, const std::vector<std::string> &data);
+        TID insert(const schema::Table &table, OrderRecord &order);
 
         /// Read a tuple by TID from the table
-        std::optional<std::vector<std::string>> read_tuple(const schema::Table &table, TID tid);
+        std::optional<OrderRecord>read_tuple(const schema::Table &table, TID tid);
 
         /// Delete a tuple by TID from the table
         void delete_tuple(const schema::Table &table, TID tid);
 
         /// Update a tuple by TID from the table
-        void update_tuple(const schema::Table &table, TID tid, const std::vector<std::string> &data);
+        void update_tuple(const schema::Table &table, TID tid,  OrderRecord &order);
 
     protected:
         /// The buffer manager

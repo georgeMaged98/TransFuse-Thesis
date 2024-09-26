@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <shared_mutex>
 
 namespace moderndbs {
 
@@ -49,6 +50,8 @@ struct SlottedPage {
       uint32_t free_space;
       /// LSN for recovery and WAL
       //uint32_t LSN;
+      /// Latch
+      std::shared_mutex sp_latch;
    };
 
    struct Slot {
@@ -144,6 +147,7 @@ struct SlottedPage {
    /// This is also the reason why the constructor and compactify require the actual page size as argument.
    /// (The slotted page itself does not know how large it is)
    Header header;
+
 };
 
 static_assert(sizeof(SlottedPage) == sizeof(SlottedPage::Header), "An empty slotted page must only contain the header");

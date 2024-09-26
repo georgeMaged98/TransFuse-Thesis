@@ -70,6 +70,8 @@ namespace moderndbs {
     protected:
         /// The schema
         std::unique_ptr<schema::Schema> schema;
+       /// Schema Latch
+       std::shared_mutex schema_mutex;
     };
 
     class FSISegment : public Segment {
@@ -103,7 +105,7 @@ namespace moderndbs {
         schema::Table &table;
         std::vector<uint8_t> fsi_bitmap;
        /// latch
-       std::mutex fsi_mutex;
+       std::shared_mutex fsi_mutex;
     };
 
     class SPSegment : public moderndbs::Segment {

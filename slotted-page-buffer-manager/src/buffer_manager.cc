@@ -110,11 +110,11 @@ void BufferManager::evict_page() {
          const auto pageNo = bf_to_be_deleted->pageNo;
          const auto data = bf_to_be_deleted->get_data();
          // Write the Buffer Frame to disk
-         buffer_manager_mutex.unlock();
+         // buffer_manager_mutex.unlock();
          // We unlock directory (buffer_manager_mutex) here to avoid holding the lock during an expensive operation (Writing to disk)
          write_buffer_frame_to_file(pageNo, data);
          // bf_to_be_deleted->latch.unlock();
-         buffer_manager_mutex.lock();
+         // buffer_manager_mutex.lock();
       }
    }
 }
@@ -181,11 +181,11 @@ std::shared_ptr<BufferFrame> BufferManager::fix_page(uint64_t page_id, bool excl
       buffer_frame->num_fixed += 1;
       buffer_frame->num_fixed_exc += (exclusive ? 1 : 0);
       bf_lock.unlock();
-      if (exclusive) {
-         buffer_frame->latch.lock();
-      } else {
-         buffer_frame->latch.lock_shared();
-      }
+      // if (exclusive) {
+      //    buffer_frame->latch.lock();
+      // } else {
+      //    buffer_frame->latch.lock_shared();
+      // }
       return buffer_frame;
    }
 
@@ -200,14 +200,15 @@ std::shared_ptr<BufferFrame> BufferManager::fix_page(uint64_t page_id, bool excl
    new_frame->is_exclusive = exclusive;
    new_frame->num_fixed = 1;
    new_frame->num_fixed_exc += (exclusive ? 1 : 0);
-   bf_lock.unlock();
-   if (exclusive) {
-      new_frame->latch.lock();
-   } else {
-      new_frame->latch.lock_shared();
-   }
    // load page from disk if it is not in memory(NOT in Hashtable). Use segment id to read from disk & update data field in the BufferFrame
    read_buffer_frame_from_file(page_id, *new_frame);
+   bf_lock.unlock();
+   // if (exclusive) {
+   //    new_frame->latch.lock();
+   // } else {
+   //    new_frame->latch.lock_shared();
+   // }
+
    return new_frame;
 }
 
@@ -218,11 +219,11 @@ void BufferManager::unfix_page(std::shared_ptr<BufferFrame> page, const bool is_
    page->num_fixed -= 1;
    page->num_fixed_exc -= (page->is_exclusive ? 1 : 0);
 
-   if (page->is_exclusive) {
-      page->latch.unlock();
-   } else {
-      page->latch.unlock_shared();
-   }
+   // if (page->is_exclusive) {
+   //    page->latch.unlock();
+   // } else {
+   //    page->latch.unlock_shared();
+   // }
 }
 
 std::vector<uint64_t> BufferManager::get_fifo_list() const {

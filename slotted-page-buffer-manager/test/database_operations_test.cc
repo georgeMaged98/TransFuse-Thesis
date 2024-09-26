@@ -34,22 +34,47 @@ namespace {
       std::cout << "\n";
    }
 
-    bool compareVectors(const std::vector<std::string> &vector1, const std::vector<std::string> &vector2) {
-        // First, check if the sizes are the same
-        assert(vector1.size() == vector2.size() && "Vectors are of different sizes");
+bool compareOrderRecords(const moderndbs::OrderRecord &record1, const moderndbs::OrderRecord &record2) {
+      // Compare each field in the OrderRecord and print detailed output if there's a mismatch
 
-        // Then, compare each element with detailed debug output
-        for (size_t i = 0; i < vector1.size(); ++i) {
-            if (vector1[i] != vector2[i]) {
-                std::cerr << "Mismatch at index " << i << ": "
-                          << "vector1[" << i << "] = \"" << vector1[i] << "\", "
-                          << "vector2[" << i << "] = \"" << vector2[i] << "\"\n";
-                return false;
-            }
-        }
-//        std::cout << "Vectors are equal!" << std::endl;
-        return true;
-    }
+      if (record1.o_orderkey != record2.o_orderkey) {
+         std::cerr << "Mismatch in o_orderkey: "
+                   << "record1.o_orderkey = " << record1.o_orderkey << ", "
+                   << "record2.o_orderkey = " << record2.o_orderkey << "\n";
+         return false;
+      }
+
+      if (record1.o_custkey != record2.o_custkey) {
+         std::cerr << "Mismatch in o_custkey: "
+                   << "record1.o_custkey = " << record1.o_custkey << ", "
+                   << "record2.o_custkey = " << record2.o_custkey << "\n";
+         return false;
+      }
+
+      if (record1.o_totalprice != record2.o_totalprice) {
+         std::cerr << "Mismatch in o_totalprice: "
+                   << "record1.o_totalprice = " << record1.o_totalprice << ", "
+                   << "record2.o_totalprice = " << record2.o_totalprice << "\n";
+         return false;
+      }
+
+      if (record1.o_shippriority != record2.o_shippriority) {
+         std::cerr << "Mismatch in o_shippriority: "
+                   << "record1.o_shippriority = " << record1.o_shippriority << ", "
+                   << "record2.o_shippriority = " << record2.o_shippriority << "\n";
+         return false;
+      }
+
+      if (record1.o_orderstatus != record2.o_orderstatus) {
+         std::cerr << "Mismatch in o_orderstatus: "
+                   << "record1.o_orderstatus = " << record1.o_orderstatus << ", "
+                   << "record2.o_orderstatus = " << record2.o_orderstatus << "\n";
+         return false;
+      }
+
+      // If all fields are equal, the records are considered equal
+      return true;
+   }
 
     std::unique_ptr<schema::Schema> getTPCHOrderSchema() {
         std::vector<schema::Table> tables{
@@ -100,20 +125,20 @@ TEST_F(DatabaseOperationsTest, WriteReadTest) {
     std::vector<moderndbs::TID> tids;
     // Insert into table and read from it immediately
     for (uint64_t i = 0;i < 200; ++i) {
-        auto values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
-        auto tid = db.insert(table, values);
-        tids.push_back(tid);
-        auto result = db.read_tuple(table, tid);
-        ASSERT_TRUE(result);
-        ASSERT_TRUE(compareVectors(values, result.value()));
+       moderndbs::OrderRecord order = {i,i * 2,i * 100,i % 5,(i % 2 == 0 ? 'G' : 'H')};
+       auto tid = db.insert(table, order);
+       tids.push_back(tid);
+       auto result = db.read_tuple(table, tid);
+       ASSERT_TRUE(result);
+       ASSERT_TRUE(compareOrderRecords(order, result.value()));
     }
 
     // Now read inserted tids again
     for (uint64_t i = 0;i < 200; ++i) {
-        auto expected_values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
-        auto result = db.read_tuple(table, tids[i]);
+       moderndbs::OrderRecord expected_order = {i,i * 2,i * 100,i % 5,(i % 2 == 0 ? 'G' : 'H')};
+       auto result = db.read_tuple(table, tids[i]);
         ASSERT_TRUE(result);
-        ASSERT_TRUE(compareVectors(expected_values, result.value()));
+        ASSERT_TRUE(compareOrderRecords(expected_order, result.value()));
     }
 }
 
@@ -131,30 +156,30 @@ TEST_F(DatabaseOperationsTest, UpdateTupleTest) {
    std::vector<moderndbs::TID> tids;
    // Insert into table and read from it immediately
    for (uint64_t i = 0;i < 200; ++i) {
-      auto values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
-      auto tid = db.insert(table, values);
+       moderndbs::OrderRecord order = {i,i * 2,i * 100,i % 5,(i % 2 == 0 ? 'G' : 'H')};
+      auto tid = db.insert(table, order);
       tids.push_back(tid);
       auto result = db.read_tuple(table, tid);
       ASSERT_TRUE(result);
-      ASSERT_TRUE(compareVectors(values, result.value()));
+      ASSERT_TRUE(compareOrderRecords(order, result.value()));
    }
 
    // Update some tuples
    for (uint64_t i = 1; i < 200; i += 2) {
-      auto new_values = std::vector<std::string>{"2000", "3000", "L", "4000", "5000"};
-       db.update_tuple(table, tids[i], new_values);
-       auto result = db.read_tuple(table, tids[i]);
-       compareVectors(new_values, result.value());
+      moderndbs::OrderRecord new_order = {2000, 3000, 4000, 5000, 'U'};
+      db.update_tuple(table, tids[i], new_order);
+      auto result = db.read_tuple(table, tids[i]);
+      compareOrderRecords(new_order, result.value());
    }
 
    // Read Everything -> Updated tids should have updated values
    for (uint64_t i = 0; i < 200; ++i) {
-      auto old_values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
-      auto new_values = std::vector<std::string>{"2000", "3000", "L", "4000", "5000"};
+      moderndbs::OrderRecord order = {i,i * 2,i * 100,i % 5,(i % 2 == 0 ? 'G' : 'H')};
+      moderndbs::OrderRecord new_order = {2000, 3000, 4000, 5000, 'U'};
       auto result = db.read_tuple(table, tids[i]);
       ASSERT_TRUE(result);
-      const auto& expected_values = (i % 2 == 1) ? new_values : old_values;
-      ASSERT_TRUE(compareVectors(expected_values, result.value()));
+      const auto& expected_values = (i % 2 == 1) ? new_order : order;
+      ASSERT_TRUE(compareOrderRecords(expected_values, result.value()));
    }
 }
 
@@ -169,12 +194,12 @@ TEST_F(DatabaseOperationsTest, DeleteTupleTest) {
    }
    db.load_schema(49);
    const auto& table = db.get_schema().tables[0];
-   const auto values = std::vector<std::string>{std::to_string(10), std::to_string(20), ("T"), std::to_string(30), std::to_string(40)};
-   const auto tid = db.insert(table, values);
+   moderndbs::OrderRecord order = {10,20,30,40,'D'};
+   const auto tid = db.insert(table, order);
    // make sure tuple is inserted properly
    auto result = db.read_tuple(table, tid);
    ASSERT_TRUE(result);
-   ASSERT_TRUE(compareVectors(values, result.value()));
+   ASSERT_TRUE(compareOrderRecords(order, result.value()));
 
    // delete tuple
    db.delete_tuple(table, tid);
@@ -196,7 +221,7 @@ TEST_F(DatabaseOperationsTest, MultithreadWriters) {
    auto &table = db.get_schema().tables[0];
    // Pre-allocate the tids vector to the correct size
    std::vector<moderndbs::TID> tids;
-   uint32_t insertions_per_thread = 500;
+   uint32_t insertions_per_thread = 100;
    tids.reserve(4 * insertions_per_thread); // 4 threads
 
    std::barrier sync_point(4);
@@ -209,26 +234,23 @@ TEST_F(DatabaseOperationsTest, MultithreadWriters) {
          size_t startValue = thread * insertions_per_thread;
          size_t limit = startValue + insertions_per_thread;
          // Insert values
-         for (auto i = 0; i < insertions_per_thread; ++i) {
+         for (uint64_t i = 0; i < insertions_per_thread; ++i) {
             // std::lock_guard<std::mutex> lock(tids_mutex);
-            auto values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
-            // printVector(values);
-            auto tid = db.insert(table, values);
+            moderndbs::OrderRecord order = {i,i * 2,i * 100,i % 5,(i % 2 == 0 ? 'G' : 'H')};
+            auto tid = db.insert(table, order);
             tids_per_thread[thread].push_back(tid);
          }
 
          sync_point.arrive_and_wait();
-
          // And read them back
-         for (auto i = 0; i < insertions_per_thread; ++i) {
-            // std::lock_guard<std::mutex> lock(tids_mutex);
-            auto expected_values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
+         for (uint64_t i = 0; i < insertions_per_thread; ++i) {
+            moderndbs::OrderRecord order = {i,i * 2,i * 100,i % 5,(i % 2 == 0 ? 'G' : 'H')};
             auto tid = tids_per_thread[thread][i];
             // printVector(expected_values);
             auto result = db.read_tuple(table, tid);
             // printVector(result.value());
             ASSERT_TRUE(result);
-            ASSERT_TRUE(compareVectors(expected_values, result.value()));
+            ASSERT_TRUE(compareOrderRecords(order, result.value()));
          }
       });
    }

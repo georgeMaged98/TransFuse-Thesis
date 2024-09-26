@@ -46,6 +46,8 @@ SchemaSegment::~SchemaSegment() {
 void SchemaSegment::read() {
    // Load the first page
    auto page = buffer_manager.fix_page(static_cast<uint64_t>(segment_id) << 48, false);
+   std::shared_lock schema_lock(schema_mutex);
+
    auto* page_data = page->get_data();
    auto page_size = buffer_manager.get_page_size();
 
@@ -129,6 +131,7 @@ void SchemaSegment::read() {
 void SchemaSegment::write() {
    // Load the first page
    auto page = buffer_manager.fix_page(static_cast<uint64_t>(segment_id) << 48, true);
+   std::unique_lock schema_lock(schema_mutex);
    auto* page_data = page->get_data();
    auto page_size = buffer_manager.get_page_size();
 
