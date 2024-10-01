@@ -118,8 +118,6 @@ void BufferManager::evict_page() {
          int& state_ref = *reinterpret_cast<int*>(data + sizeof(int));
          std::atomic_ref<int> state_atomic(state_ref);
          state_atomic.store(static_cast<int>(bf_to_be_deleted->custom_latch.state.load()));
-         cout << " STATEEE BEFORE WRITING " << static_cast<int>(bf_to_be_deleted->custom_latch.state.load()) << "  " << bf_to_be_deleted->pageNo << "\n";
-
          // Write the Buffer Frame to disk
          // buffer_manager_mutex.unlock();
          // We unlock directory (buffer_manager_mutex) here to avoid holding the lock during an expensive operation (Writing to disk)

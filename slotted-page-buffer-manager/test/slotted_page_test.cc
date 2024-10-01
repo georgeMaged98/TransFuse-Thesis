@@ -17,18 +17,18 @@ namespace {
 // NOLINTNEXTLINE
 TEST(SlottedPageTest, Constructor) {
     std::vector<std::byte> buffer;
-    buffer.resize(1024);
-    auto* page = new (&buffer[0]) SlottedPage(1024);
+    buffer.resize(sysconf (_SC_PAGESIZE));
+    auto* page = new (&buffer[0]) SlottedPage(sysconf (_SC_PAGESIZE));
 
     EXPECT_EQ(page->header.slot_count, 0);
     EXPECT_EQ(page->header.first_free_slot, 0);
-    EXPECT_EQ(page->header.data_start, 1024);
-    EXPECT_EQ(page->header.free_space, 1024 - sizeof(SlottedPage::Header));
+    EXPECT_EQ(page->header.data_start, sysconf (_SC_PAGESIZE));
+    EXPECT_EQ(page->header.free_space, sysconf (_SC_PAGESIZE) - sizeof(SlottedPage::Header));
 }
 
 // NOLINTNEXTLINE
 TEST(SlottedPageTest, Allocation) {
-    size_t page_size = 1024;
+    size_t page_size = sysconf (_SC_PAGESIZE);
     size_t record_size = 8;
     size_t max_records = (page_size - sizeof(SlottedPage::Header)) / (record_size + sizeof(SlottedPage::Slot));
 
@@ -57,7 +57,7 @@ TEST(SlottedPageTest, Allocation) {
 
 // NOLINTNEXTLINE
 TEST(SlottedPageTest, AllocateErase) {
-    size_t page_size = 1024;
+    size_t page_size = sysconf (_SC_PAGESIZE);
     size_t record_size = 8;
 
     std::vector<std::byte> buffer;
@@ -109,7 +109,7 @@ TEST(SlottedPageTest, AllocateErase) {
 
 // NOLINTNEXTLINE
 TEST(SlottedPageTest, RelocateWithoutBuffer) {
-    size_t page_size = 1024;
+    size_t page_size = sysconf (_SC_PAGESIZE);
     size_t record_size = 8;
 
     std::vector<std::byte> buffer;
@@ -137,7 +137,7 @@ TEST(SlottedPageTest, RelocateWithoutBuffer) {
 
 // NOLINTNEXTLINE
 TEST(SlottedPageTest, RelocateWithCompactification) {
-    size_t page_size = 1024;
+    size_t page_size = sysconf (_SC_PAGESIZE);
     size_t record_size = 8;
     size_t max_records = (page_size - sizeof(SlottedPage::Header)) / (record_size + sizeof(SlottedPage::Slot));
 
