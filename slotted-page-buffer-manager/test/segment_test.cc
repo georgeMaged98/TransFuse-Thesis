@@ -356,7 +356,7 @@ TEST_F(SegmentTest, SPRecordErase) {
    auto& table = schema_segment.get_schema()->tables[0];
    FSISegment fsi_segment(table.fsi_segment, buffer_manager, table);
    SPSegment sp_segment(table.sp_segment, buffer_manager, schema_segment, fsi_segment, table);
-   auto max = 1024 - sizeof(SlottedPage::Slot) - sizeof(SlottedPage::Header);
+   auto max = 1024 - 2 * sizeof(int) - sizeof(SlottedPage::Slot) - sizeof(SlottedPage::Header);
 
    // Allocate a full page
    auto tid = sp_segment.allocate(max);
@@ -380,8 +380,8 @@ TEST_F(SegmentTest, SPRecordErase) {
    page = reinterpret_cast<SlottedPage*>(frame->get_data());
    ASSERT_EQ(page->header.slot_count, 0);
    ASSERT_EQ(page->header.first_free_slot, 0);
-   ASSERT_EQ(page->header.free_space, 1024 - sizeof(SlottedPage::Header));
-   ASSERT_EQ(page->header.data_start, 1024);
+   ASSERT_EQ(page->header.free_space, 1024 - sizeof(SlottedPage::Header) - 2 * sizeof(int));
+   ASSERT_EQ(page->header.data_start, 1024 - 2 * sizeof(int));
    buffer_manager.unfix_page(frame, true);
 }
 

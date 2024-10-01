@@ -1,6 +1,8 @@
 #ifndef INCLUDE_MODERNDBS_BUFFER_MANAGER_H
 #define INCLUDE_MODERNDBS_BUFFER_MANAGER_H
 
+#include "custom_read_writer_lock.h"
+
 #include <algorithm>
 #include <atomic>
 #include <cstddef>
@@ -25,6 +27,9 @@ class BufferFrame {
    uint64_t pageNo;
    // latch
    std::shared_mutex latch;
+   // custom latch
+   CustomReadWriteLock custom_latch;
+
    //  LSN
    bool is_dirty;
    bool is_exclusive;
@@ -35,7 +40,10 @@ class BufferFrame {
 
    public:
    /// Returns a pointer to this page's data.
-   char* get_data();
+   char* get_data() const;
+
+   /// Returns a pointer to this page's data with locks.
+   char* get_data_with_locks() const;
 };
 
 class buffer_full_error
@@ -106,7 +114,7 @@ class BufferManager {
    void read_buffer_frame_from_file(uint64_t page_id, BufferFrame& bf) const;
 
    /// Returns size of a page
-   [[nodiscard]] size_t get_page_size() const { return page_size; }
+   [[nodiscard]] size_t get_page_size() const { return page_size - 2 * sizeof(int); }
 
    /// Returns true if the buffer manager is full of entries and we have to evict a page
    /// False, otherwise

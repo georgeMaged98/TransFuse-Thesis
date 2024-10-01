@@ -42,9 +42,9 @@ void BufferManager::read_buffer_frame_from_file(uint64_t page_id, BufferFrame& b
                                                    File::Mode::READ);
       size_t page_offset_in_file = get_segment_page_id(page_id) * this->page_size;
 
-      file->read_block(page_offset_in_file, this->page_size, bf.get_data());
+      file->read_block(page_offset_in_file, this->page_size, bf.get_data_with_locks());
    } catch (const std::exception& e) {
-      std::cout << "File Not Found!! " << std::endl;
+      std::cout << "File Not Found!! \n";
    }
 }
 
@@ -108,7 +108,18 @@ void BufferManager::evict_page() {
       // If page is dirty, write it to disk:
       if (bf_to_be_deleted->is_dirty) {
          const auto pageNo = bf_to_be_deleted->pageNo;
-         const auto data = bf_to_be_deleted->get_data();
+         const auto data = bf_to_be_deleted->get_data_with_locks();
+         // Write the readers_count and state to the first bytes of data using atomic_ref
+         int& readers_count_ref = *reinterpret_cast<int*>(data);
+         std::atomic_ref<int> readers_count_atomic(readers_count_ref);
+         readers_count_atomic.store(bf_to_be_deleted->custom_latch.readers_count.load());
+
+         // Store state in the next bytes of the data buffer using atomic_ref
+         int& state_ref = *reinterpret_cast<int*>(data + sizeof(int));
+         std::atomic_ref<int> state_atomic(state_ref);
+         state_atomic.store(static_cast<int>(bf_to_be_deleted->custom_latch.state.load()));
+         cout << " STATEEE BEFORE WRITING " << static_cast<int>(bf_to_be_deleted->custom_latch.state.load()) << "  " << bf_to_be_deleted->pageNo << "\n";
+
          // Write the Buffer Frame to disk
          // buffer_manager_mutex.unlock();
          // We unlock directory (buffer_manager_mutex) here to avoid holding the lock during an expensive operation (Writing to disk)
@@ -119,9 +130,16 @@ void BufferManager::evict_page() {
    }
 }
 
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-char* BufferFrame::get_data() {
+char* BufferFrame::get_data() const {
+   // Skip the first 2 * sizeof(int) bytes, which are reserved for readers_count and state
+   return data.get() + 2 * sizeof(int);
+}
+
+char* BufferFrame::get_data_with_locks() const {
    return data.get();
 }
 
@@ -137,7 +155,19 @@ BufferManager::~BufferManager() {
    for (auto& i : this->hashtable) {
       // ADD IS_DIRTY check
       if (i.second->is_dirty) {
-         write_buffer_frame_to_file(i.second->pageNo, i.second->get_data());
+         const auto pageNo = i.second->pageNo;
+         const auto data = i.second->get_data_with_locks();
+         // Write the readers_count and state to the first bytes of data using atomic_ref
+         int& readers_count_ref = *reinterpret_cast<int*>(data);
+         std::atomic_ref<int> readers_count_atomic(readers_count_ref);
+         readers_count_atomic.store(i.second->custom_latch.readers_count.load());
+
+         // Store state in the next bytes of the data buffer using atomic_ref
+         int& state_ref = *reinterpret_cast<int*>(data + sizeof(int));
+         std::atomic_ref<int> state_atomic(state_ref);
+         state_atomic.store(static_cast<int>(i.second->custom_latch.state.load()));
+
+         write_buffer_frame_to_file(i.second->pageNo, i.second->get_data_with_locks());
       }
    }
 }
@@ -181,6 +211,23 @@ std::shared_ptr<BufferFrame> BufferManager::fix_page(uint64_t page_id, bool excl
       buffer_frame->num_fixed += 1;
       buffer_frame->num_fixed_exc += (exclusive ? 1 : 0);
       bf_lock.unlock();
+      if(exclusive) {
+         std::cout << "Trying lock exc: \n";
+         // buffer_frame->custom_latch.lock_exclusive();
+         // if (buffer_frame->custom_latch.state.load() == CustomReadWriteLock::State::LOCKED_EXCLUSIVE) {
+         //    std::cout << "Page already locked exclusively. BF id: " << page_id << "\n";
+         // } else {
+            buffer_frame->custom_latch.lock_exclusive();
+         buffer_frame->is_exclusive = true;
+         // }
+      }else {
+         std::cout << "Trying lock shared: \n";
+         // if(buffer_frame->custom_latch.readers_count.load() > 0) {
+         //    std::cout << "\n";
+         // }
+         buffer_frame->custom_latch.lock_shared();
+         buffer_frame->is_exclusive = false;
+      }
       // if (exclusive) {
       //    buffer_frame->latch.lock();
       // } else {
@@ -197,13 +244,41 @@ std::shared_ptr<BufferFrame> BufferManager::fix_page(uint64_t page_id, bool excl
    new_frame->pageNo = page_id;
    new_frame->is_dirty = false;
    new_frame->data = std::make_unique<char[]>(this->page_size);
-   new_frame->is_exclusive = exclusive;
+   // new_frame->is_exclusive = exclusive;
    new_frame->num_fixed = 1;
    new_frame->num_fixed_exc += (exclusive ? 1 : 0);
    // load page from disk if it is not in memory(NOT in Hashtable). Use segment id to read from disk & update data field in the BufferFrame
    read_buffer_frame_from_file(page_id, *new_frame);
+
+   // Initialize Locks from file.
+   int& readers_count_ref = *reinterpret_cast<int*>(new_frame->get_data_with_locks());
+   const std::atomic_ref<int> readers_count_atomic(readers_count_ref);
+   new_frame->custom_latch.readers_count.store(readers_count_atomic.load());  // Use atomic_ref to load the readers count atomically
+   // Interpret the next sizeof(int) bytes of the data buffer as state
+   int& state_ref = *reinterpret_cast<int*>(new_frame->get_data_with_locks() + sizeof(int));
+   std::atomic_ref<int> state_atomic(state_ref);
+   new_frame->custom_latch.state.store(static_cast<CustomReadWriteLock::State>(state_atomic.load()));
+
    bf_lock.unlock();
-   // if (exclusive) {
+   // if (new_frame->custom_latch.state.load() == CustomReadWriteLock::State::LOCKED_EXCLUSIVE) {
+   //    std::cout << "Page already locked exclusively. BF id: " << page_id << "\n";
+   // } else {
+   //    new_frame->custom_latch.lock_exclusive();
+   // }
+
+   if (exclusive) {
+      // new_frame->custom_latch.lock_exclusive();
+      // if (new_frame->custom_latch.state.load() == CustomReadWriteLock::State::LOCKED_EXCLUSIVE) {
+      //    std::cout << "Page already locked exclusively. BF id: " << page_id << "\n";
+      // } else {
+      new_frame->custom_latch.lock_exclusive();
+      new_frame->is_exclusive = true;
+      // }
+   } else {
+      new_frame->custom_latch.lock_shared();
+      new_frame->is_exclusive = false;
+   }
+   // if (new_frame->is_exclusive) {
    //    new_frame->latch.lock();
    // } else {
    //    new_frame->latch.lock_shared();
@@ -214,10 +289,19 @@ std::shared_ptr<BufferFrame> BufferManager::fix_page(uint64_t page_id, bool excl
 
 void BufferManager::unfix_page(std::shared_ptr<BufferFrame> page, const bool is_dirty) {
    std::unique_lock bf_lock(buffer_manager_mutex);
-   num_fixed_pages.fetch_sub(1ul);
    page->is_dirty = is_dirty;
    page->num_fixed -= 1;
    page->num_fixed_exc -= (page->is_exclusive ? 1 : 0);
+   num_fixed_pages.fetch_sub(1ul);
+
+   bf_lock.unlock();
+
+   if (page->is_exclusive) {
+      page->custom_latch.unlock_exclusive();
+      // page->is_exclusive = false;
+   } else {
+      page->custom_latch.unlock_shared();
+   }
 
    // if (page->is_exclusive) {
    //    page->latch.unlock();

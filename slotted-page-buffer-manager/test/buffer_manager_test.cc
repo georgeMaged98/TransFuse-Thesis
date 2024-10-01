@@ -14,19 +14,19 @@ namespace {
 // NOLINTNEXTLINE
 TEST(BufferManagerTest, FixSingle) {
     moderndbs::BufferManager buffer_manager{1024, 10};
-    std::vector<uint64_t> expected_values(1024 / sizeof(uint64_t), 123);
+    std::vector<uint64_t> expected_values((1024 - 2 * sizeof(int) )/ sizeof(uint64_t), 123);
     {
         auto page = buffer_manager.fix_page(1, true);
         ASSERT_TRUE(page->get_data());
-        std::memcpy(page->get_data(), expected_values.data(), 1024);
+        std::memcpy(page->get_data(), expected_values.data(), 1024 - 2 * sizeof(int));
         buffer_manager.unfix_page(page, true);
         EXPECT_EQ(std::vector<uint64_t>{1}, buffer_manager.get_fifo_list());
         EXPECT_TRUE(buffer_manager.get_lru_list().empty());
     }
     {
-        std::vector<uint64_t> values(1024 / sizeof(uint64_t));
+        std::vector<uint64_t> values((1024 - 2 * sizeof(int) ) / sizeof(uint64_t));
         auto page = buffer_manager.fix_page(1, false);
-        std::memcpy(values.data(), page->get_data(), 1024);
+        std::memcpy(values.data(), page->get_data(), 1024 - 2 * sizeof(int));
         buffer_manager.unfix_page(page, true);
         EXPECT_TRUE(buffer_manager.get_fifo_list().empty());
         EXPECT_EQ(std::vector<uint64_t>{1}, buffer_manager.get_lru_list());
@@ -172,7 +172,7 @@ TEST(BufferManagerTest, MultithreadExclusiveAccess) {
     {
         auto page = buffer_manager.fix_page(0, true);
         ASSERT_TRUE(page->get_data());
-        std::memset(page->get_data(), 0, 1024);
+        std::memset(page->get_data(), 0, 1024 - 2 * sizeof(int));
         buffer_manager.unfix_page(page, true);
     }
     std::vector<std::thread> threads;
@@ -205,7 +205,7 @@ TEST(BufferManagerTest, BlockedThreadsHoldsNoLocks) {
   for (size_t i = 0; i < 2; ++i ){
     auto page = buffer_manager.fix_page(i, true);
     ASSERT_TRUE(page->get_data());
-    std::memset(page->get_data(), 0, 1024);
+    std::memset(page->get_data(), 0, 1024 - 2 * sizeof(int));
     buffer_manager.unfix_page(page, true);
   }
   auto blockedCv = std::condition_variable();
@@ -331,7 +331,7 @@ TEST(BufferManagerTest, MultithreadReaderWriter) {
                 uint64_t page_id = (static_cast<uint64_t>(segment) << 48) | segment_page;
                 auto page = buffer_manager.fix_page(page_id, true);
                 ASSERT_TRUE(page->get_data());
-                std::memset(page->get_data(), 0, 1024);
+                std::memset(page->get_data(), 0, 1024 - 2 * sizeof(int));
                 buffer_manager.unfix_page(page, true);
             }
         }
@@ -374,6 +374,7 @@ TEST(BufferManagerTest, MultithreadReaderWriter) {
                             } catch (const moderndbs::buffer_full_error&) {
                                 // Don't abort scan when the buffer is full, retry
                                 // the current page.
+                               std::cout << "\n";
                             }
                         }
                         ASSERT_TRUE(page->get_data());

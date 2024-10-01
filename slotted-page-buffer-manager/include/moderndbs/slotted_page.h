@@ -51,7 +51,7 @@ struct SlottedPage {
       /// LSN for recovery and WAL
       //uint32_t LSN;
       /// Latch
-      std::shared_mutex sp_latch;
+      // std::shared_mutex sp_latch;
    };
 
    struct Slot {

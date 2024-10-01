@@ -26,14 +26,14 @@ TID SPSegment::allocate(uint32_t size) {
       auto* page_data = page->get_data();
       // If the page is already there, it's sufficient to use reinterpret_cast<SlottedPage*>
       auto* slotted_page = reinterpret_cast<SlottedPage*>(page_data);
-      std::unique_lock sp_lock(slotted_page->header.sp_latch);
+      // std::unique_lock sp_lock(slotted_page->header.sp_latch);
       auto slot_id = slotted_page->allocate(size, buffer_manager.get_page_size());
       auto &slot = slotted_page->get_slots()[slot_id];
       TID tid = TID(page_id, slot_id);
       std::cout << "Allocating page " << page_id << " slot " << slot_id << " TID: " <<  tid.get_value() << "\n";
       // Unfix the page
       buffer_manager.unfix_page(page, true);
-      sp_lock.unlock();
+      // sp_lock.unlock();
       // Update fsi
       fsi.update(page_id, slotted_page->get_free_space());
       fsi.fsi_mutex.unlock();
@@ -44,7 +44,7 @@ TID SPSegment::allocate(uint32_t size) {
    auto new_page_id = table.allocated_pages++; // Adjust number of allocated pages in Table
    auto page = buffer_manager.fix_page((static_cast<uint64_t>(segment_id) << 48) ^ new_page_id, true);
    auto* slotted_page = new (page->get_data()) SlottedPage(buffer_manager.get_page_size());
-   std::unique_lock sp_lock(slotted_page->header.sp_latch);
+   // std::unique_lock sp_lock(slotted_page->header.sp_latch);
 
    uint16_t slot_id = slotted_page->allocate(size, buffer_manager.get_page_size());
 
@@ -52,7 +52,7 @@ TID SPSegment::allocate(uint32_t size) {
    TID tid = TID(new_page_id, slot_id);
    // Unfix the page
    buffer_manager.unfix_page(page, true);
-   sp_lock.unlock();
+   // sp_lock.unlock();
    // update free_space_inventory
    fsi.update(new_page_id, slotted_page->header.free_space);
    fsi.fsi_mutex.unlock();
@@ -69,7 +69,7 @@ std::optional<uint32_t> SPSegment::read(TID tid, std::byte* record, uint32_t cap
    auto page = buffer_manager.fix_page(page_id, false);
    // If the page is already there, it's sufficient to use reinterpret_cast<SlottedPage*>
    auto* slotted_page = reinterpret_cast<SlottedPage*>(page->get_data());
-   std::shared_lock sp_lock(slotted_page->header.sp_latch);
+   // std::shared_lock sp_lock(slotted_page->header.sp_latch);
    auto slot_id = tid.get_slot();
    auto& slot = slotted_page->get_slots()[slot_id];
 
@@ -85,7 +85,7 @@ std::optional<uint32_t> SPSegment::read(TID tid, std::byte* record, uint32_t cap
    uint32_t read_bytes = std::min(slot.get_size(), capacity);
    memcpy(record, slotted_page->get_data() + slot.get_offset(), read_bytes);
    buffer_manager.unfix_page(page, false);
-   sp_lock.unlock();
+   // sp_lock.unlock();
    return read_bytes;
 }
 
@@ -100,7 +100,7 @@ uint32_t SPSegment::write(TID tid, std::byte* record, uint32_t record_size, bool
    auto page = buffer_manager.fix_page(page_id, true);
    // If the page is already there, it's sufficient to use reinterpret_cast<SlottedPage*>
    auto& slotted_page = *reinterpret_cast<SlottedPage*>(page->get_data());
-   std::unique_lock sp_lock(slotted_page.header.sp_latch);
+   // std::unique_lock sp_lock(slotted_page.header.sp_latch);
    auto slot_id = tid.get_slot();
    auto& slot = slotted_page.get_slots()[slot_id];
    if (is_update && slot.is_empty()) {
@@ -117,7 +117,7 @@ uint32_t SPSegment::write(TID tid, std::byte* record, uint32_t record_size, bool
    auto offset = slot.get_offset(); // The place at which we write the data.
    memcpy(slotted_page.get_data() + offset, record, written_bytes);
    buffer_manager.unfix_page(page, true);
-   sp_lock.unlock();
+   // sp_lock.unlock();
    return written_bytes;
 }
 
@@ -179,7 +179,7 @@ bool SPSegment::erase(TID tid) {
    auto page = buffer_manager.fix_page(tid.get_page_id(segment_id), true);
    // If the page is already there, it's sufficient to use reinterpret_cast<SlottedPage*>
    auto& slotted_page = *reinterpret_cast<SlottedPage*>(page->get_data());
-   std::unique_lock sp_lock(slotted_page.header.sp_latch);
+   // std::unique_lock sp_lock(slotted_page.header.sp_latch);
    auto& slot = slotted_page.get_slots()[tid.get_slot()];
 
    if (slot.is_empty()) {
