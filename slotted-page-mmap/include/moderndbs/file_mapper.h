@@ -5,6 +5,8 @@
 #ifndef FILEMAPPER_H
 #define FILEMAPPER_H
 
+#include "custom_read_writer_lock.h"
+
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
@@ -18,12 +20,6 @@ using namespace std;
 
 namespace moderndbs {
 
-struct PageLayout {
-   size_t id;
-   size_t count;
-   bool exclusive;
-   char data[];
-};
 class Page {
    public:
    // Delete the copy constructor and assignment operator
@@ -52,7 +48,7 @@ class Page {
 
       // Optional: Check memory alignment
       if (reinterpret_cast<uintptr_t>(mapped_data) % alignof(size_t) != 0) {
-         std::cerr << "Memory is not properly aligned for size_t" << std::endl;
+         std::cerr << "Memory is not properly aligned for size_t\n";
          throw std::runtime_error("Memory alignment issue");
       }
    }
@@ -66,10 +62,11 @@ class Page {
    [[nodiscard]] size_t get_id() const { return *id; }
    [[nodiscard]] size_t get_count() const { return *count; }
    [[nodiscard]] bool is_exclusive() const { return *exclusive; }
-   [[nodiscard]] char* get_data() const { return data; }
+   [[nodiscard]] char* get_data() const { return data /*+ 2 * sizeof(int)*/; }
+   [[nodiscard]] char* get_data_with_locks() const { return data; }
 
-   /// This std::shared_mutex makes the class non-movable and non-copyable.
-   // std::shared_mutex latch;
+   // custom latch
+   CustomReadWriteLock custom_latch;
 
    private:
    friend class Segment;
@@ -79,6 +76,7 @@ class Page {
    bool* exclusive = nullptr;
    char* data = nullptr;
    size_t data_size = 0;
+
 };
 
 class FileMapper {
@@ -91,7 +89,9 @@ class FileMapper {
 
    ~FileMapper();
 
-   [[nodiscard]] Page* get_page(size_t page_number, bool is_exclusive);
+   [[nodiscard]] std::shared_ptr<Page> get_page(size_t page_number, bool is_exclusive);
+
+   void release_page(std::shared_ptr<Page> page);
 
    [[nodiscard]] size_t get_page_size() const { return page_size_; }
 

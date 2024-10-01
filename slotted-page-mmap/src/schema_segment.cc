@@ -48,7 +48,7 @@ SchemaSegment::~SchemaSegment() {
 void SchemaSegment::read() {
    // Load the first page
    // auto& page = buffer_manager.fix_page(static_cast<uint64_t>(segment_id) << 48, false);
-   Page* page = file_mapper.get_page(0, false);
+   auto page = file_mapper.get_page(0, false);
    auto page_size = file_mapper.get_page_size();
 
    // [0-8[   : Schema string length in #bytes
@@ -68,6 +68,7 @@ void SchemaSegment::read() {
 
    // Release first page
    // buffer_manager.unfix_page(page, false);
+   file_mapper.release_page(page);
 
    // Read all other schema pages
    for (int pid = 1; remaining_bytes > 0; pid++) {
@@ -77,6 +78,7 @@ void SchemaSegment::read() {
       std::memcpy(&buffer[buffer_offset], page->get_data(), n);
       buffer_offset += n;
       remaining_bytes -= n;
+      file_mapper.release_page(page);
       // buffer_manager.unfix_page(page, false);
    }
 
@@ -133,13 +135,14 @@ void SchemaSegment::read() {
 void SchemaSegment::write() {
    // Load the first page
    // auto& page = buffer_manager.fix_page(static_cast<uint64_t>(segment_id) << 48, true);
-   Page* page = file_mapper.get_page(0, true);
+   auto page = file_mapper.get_page(0, true);
    auto page_size = file_mapper.get_page_size();
 
    // [0-8[   : Schema string length in #bytes
    if (!schema) {
       *reinterpret_cast<uint64_t*>(page->get_data()) = 0;
       // buffer_manager.unfix_page(page, true);
+      file_mapper.release_page(page);
       return;
    }
 
@@ -216,6 +219,7 @@ void SchemaSegment::write() {
 
    // Release first page
    // buffer_manager.unfix_page(page, true);
+   file_mapper.release_page(page);
 
    // Write all other schema pages
    for (int pid = 1; remaining_bytes > 0; pid++) {
@@ -227,5 +231,6 @@ void SchemaSegment::write() {
       buffer_offset += n;
       remaining_bytes -= n;
       // buffer_manager.unfix_page(page, true);
+      file_mapper.release_page(page);
    }
 }
