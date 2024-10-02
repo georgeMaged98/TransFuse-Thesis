@@ -15,4 +15,5 @@ set(
     include/moderndbs/segment.h
     include/moderndbs/slotted_page.h
     include/moderndbs/file_mapper.h
+    include/moderndbs/custom_read_writer_lock.h
 )

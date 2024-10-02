@@ -13,21 +13,20 @@ namespace {
 
 // NOLINTNEXTLINE
 TEST(BufferManagerTest, FixSingle) {
-   long page_size = sysconf (_SC_PAGESIZE);
-    moderndbs::BufferManager buffer_manager{page_size, 10};
-    std::vector<uint64_t> expected_values((page_size - 2 * sizeof(int) )/ sizeof(uint64_t), 123);
+    moderndbs::BufferManager buffer_manager{static_cast<size_t>(sysconf (_SC_PAGESIZE)), 10};
+    std::vector<uint64_t> expected_values((static_cast<size_t>(sysconf (_SC_PAGESIZE)) - 2 * sizeof(int) )/ sizeof(uint64_t), 123);
     {
         auto page = buffer_manager.fix_page(1, true);
         ASSERT_TRUE(page->get_data());
-        std::memcpy(page->get_data(), expected_values.data(), page_size - 2 * sizeof(int));
+        std::memcpy(page->get_data(), expected_values.data(), static_cast<size_t>(sysconf (_SC_PAGESIZE)) - 2 * sizeof(int));
         buffer_manager.unfix_page(page, true);
         EXPECT_EQ(std::vector<uint64_t>{1}, buffer_manager.get_fifo_list());
         EXPECT_TRUE(buffer_manager.get_lru_list().empty());
     }
     {
-        std::vector<uint64_t> values((page_size - 2 * sizeof(int) ) / sizeof(uint64_t));
+        std::vector<uint64_t> values((static_cast<size_t>(sysconf (_SC_PAGESIZE)) - 2 * sizeof(int) ) / sizeof(uint64_t));
         auto page = buffer_manager.fix_page(1, false);
-        std::memcpy(values.data(), page->get_data(), page_size - 2 * sizeof(int));
+        std::memcpy(values.data(), page->get_data(), static_cast<size_t>(sysconf (_SC_PAGESIZE)) - 2 * sizeof(int));
         buffer_manager.unfix_page(page, true);
         EXPECT_TRUE(buffer_manager.get_fifo_list().empty());
         EXPECT_EQ(std::vector<uint64_t>{1}, buffer_manager.get_lru_list());
@@ -66,7 +65,7 @@ TEST(BufferManagerTest, PersistentRestart) {
 
 // NOLINTNEXTLINE
 TEST(BufferManagerTest, FIFOEvict) {
-    moderndbs::BufferManager buffer_manager{sysconf (_SC_PAGESIZE), 10};
+    moderndbs::BufferManager buffer_manager{static_cast<size_t>(sysconf (_SC_PAGESIZE)), 10};
     for (uint64_t i = 1; i < 11; ++i) {
         auto page = buffer_manager.fix_page(i, false);
         buffer_manager.unfix_page(page, false);
@@ -90,7 +89,7 @@ TEST(BufferManagerTest, FIFOEvict) {
 
 // NOLINTNEXTLINE
 TEST(BufferManagerTest, BufferFull) {
-    moderndbs::BufferManager buffer_manager{sysconf (_SC_PAGESIZE), 10};
+    moderndbs::BufferManager buffer_manager{static_cast<size_t>(sysconf (_SC_PAGESIZE)), 10};
     std::vector<std::shared_ptr<moderndbs::BufferFrame>> pages;
     pages.reserve(10);
     for (uint64_t i = 1; i < 11; ++i) {
@@ -107,7 +106,7 @@ TEST(BufferManagerTest, BufferFull) {
 
 // NOLINTNEXTLINE
 TEST(BufferManagerTest, MoveToLRU) {
-    moderndbs::BufferManager buffer_manager{sysconf (_SC_PAGESIZE), 10};
+    moderndbs::BufferManager buffer_manager{static_cast<size_t>(sysconf (_SC_PAGESIZE)), 10};
     auto fifo_page = buffer_manager.fix_page(1, false);
     auto lru_page = buffer_manager.fix_page(2, false);
     buffer_manager.unfix_page(fifo_page, false);
@@ -123,7 +122,7 @@ TEST(BufferManagerTest, MoveToLRU) {
 
 // NOLINTNEXTLINE
 TEST(BufferManagerTest, LRURefresh) {
-    moderndbs::BufferManager buffer_manager{sysconf (_SC_PAGESIZE), 10};
+    moderndbs::BufferManager buffer_manager{static_cast<size_t>(sysconf (_SC_PAGESIZE)), 10};
     auto page1 = buffer_manager.fix_page(1, false);
     buffer_manager.unfix_page(page1, false);
     page1 = buffer_manager.fix_page(1, false);
@@ -143,7 +142,7 @@ TEST(BufferManagerTest, LRURefresh) {
 
 // NOLINTNEXTLINE
 TEST(BufferManagerTest, MultithreadParallelFix) {
-    moderndbs::BufferManager buffer_manager{sysconf (_SC_PAGESIZE), 10};
+    moderndbs::BufferManager buffer_manager{static_cast<size_t>(sysconf (_SC_PAGESIZE)), 10};
     std::vector<std::thread> threads;
     for (size_t i = 0; i < 4; ++i) {
         threads.emplace_back([i, &buffer_manager] {
@@ -169,7 +168,7 @@ TEST(BufferManagerTest, MultithreadParallelFix) {
 
 // NOLINTNEXTLINE
 TEST(BufferManagerTest, MultithreadExclusiveAccess) {
-    moderndbs::BufferManager buffer_manager{sysconf (_SC_PAGESIZE), 10};
+    moderndbs::BufferManager buffer_manager{static_cast<size_t>(sysconf (_SC_PAGESIZE)), 10};
     {
         auto page = buffer_manager.fix_page(0, true);
         ASSERT_TRUE(page->get_data());
@@ -202,7 +201,7 @@ TEST(BufferManagerTest, MultithreadExclusiveAccess) {
 
 // NOLINTNEXTLINE
 TEST(BufferManagerTest, BlockedThreadsHoldsNoLocks) {
-  moderndbs::BufferManager buffer_manager{sysconf (_SC_PAGESIZE), 10};
+  moderndbs::BufferManager buffer_manager{static_cast<size_t>(sysconf (_SC_PAGESIZE)), 10};
   for (size_t i = 0; i < 2; ++i ){
     auto page = buffer_manager.fix_page(i, true);
     ASSERT_TRUE(page->get_data());
@@ -268,7 +267,7 @@ TEST(BufferManagerTest, BlockedThreadsHoldsNoLocks) {
 
 // NOLINTNEXTLINE
 TEST(BufferManagerTest, MultithreadBufferFull) {
-    moderndbs::BufferManager buffer_manager{sysconf (_SC_PAGESIZE), 10};
+    moderndbs::BufferManager buffer_manager{static_cast<size_t>(sysconf (_SC_PAGESIZE)), 10};
     std::atomic<uint64_t> num_buffer_full = 0;
     std::atomic<uint64_t> finished_threads = 0;
     std::vector<std::thread> threads;
@@ -302,7 +301,7 @@ TEST(BufferManagerTest, MultithreadBufferFull) {
 
 // NOLINTNEXTLINE
 TEST(BufferManagerTest, MultithreadManyPages) {
-    moderndbs::BufferManager buffer_manager{sysconf (_SC_PAGESIZE), 10};
+    moderndbs::BufferManager buffer_manager{static_cast<size_t>(sysconf (_SC_PAGESIZE)), 10};
     std::vector<std::thread> threads;
     for (size_t i = 0; i < 4; ++i) {
         threads.emplace_back([i, &buffer_manager] {
@@ -326,7 +325,7 @@ TEST(BufferManagerTest, MultithreadManyPages) {
 TEST(BufferManagerTest, MultithreadReaderWriter) {
     {
         // Zero out all pages first
-        moderndbs::BufferManager buffer_manager{sysconf (_SC_PAGESIZE), 10};
+        moderndbs::BufferManager buffer_manager{static_cast<size_t>(sysconf (_SC_PAGESIZE)), 50};
         for (uint16_t segment = 0; segment <= 3; ++segment) {
             for (uint64_t segment_page = 0; segment_page <= 100; ++segment_page) {
                 uint64_t page_id = (static_cast<uint64_t>(segment) << 48) | segment_page;
@@ -339,7 +338,7 @@ TEST(BufferManagerTest, MultithreadReaderWriter) {
         // Let the buffer manager be destroyed here so that the caches are
         // empty before running the actual test.
     }
-    moderndbs::BufferManager buffer_manager{sysconf (_SC_PAGESIZE), 10};
+    moderndbs::BufferManager buffer_manager{static_cast<size_t>(sysconf (_SC_PAGESIZE)), 50};
     std::atomic<size_t> aborts = 0;
     std::vector<std::thread> threads;
     for (size_t i = 0; i < 4; ++i) {

@@ -8,6 +8,7 @@
 #include "moderndbs/hex_dump.h"
 #include "moderndbs/segment.h"
 #include <algorithm>
+#include <cstring>
 #include <vector>
 #include <random>
 // ---------------------------------------------------------------------------------------------------
@@ -99,7 +100,7 @@ void SlottedPages(benchmark::State& state) {
 
       // fill two pages
       for (uint64_t i = 0; i < workload_size * 2; ++i) {
-         std::memset(writeBuffer.data(), i, record_size);
+         memset(writeBuffer.data(), i, record_size);
          auto tid = sp_segment.allocate(record_size);
          sp_segment.write(tid, writeBuffer.data(), record_size);
          tids.push_back(tid);

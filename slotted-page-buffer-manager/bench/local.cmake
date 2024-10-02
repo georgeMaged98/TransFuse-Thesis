@@ -8,6 +8,7 @@
 
 set(BENCH_CC
     bench/bm_slotted_page.cc
+    bench/bm_buffer_manager.cc
 )
 
 add_executable(benchmarks bench/benchmark.cc ${BENCH_CC})

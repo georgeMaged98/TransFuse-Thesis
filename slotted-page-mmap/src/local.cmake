@@ -26,6 +26,7 @@ set(
     src/slotted_page.cc
     src/sp_segment.cc
     src/file_mapper.cc
+    src/custom_read_writer_lock.cc
 )
 if(UNIX)
     set(SRC_CC ${SRC_CC} src/file/posix_file.cc)

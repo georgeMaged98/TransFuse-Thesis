@@ -34,7 +34,6 @@ class BufferFrame {
    bool is_dirty;
    bool is_exclusive;
    int64_t num_fixed;
-   uint64_t num_fixed_exc;
 
    std::unique_ptr<char[]> data;
 
