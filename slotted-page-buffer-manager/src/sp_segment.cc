@@ -173,6 +173,7 @@ void SPSegment::resize(TID tid, uint32_t new_length) {
 
 bool SPSegment::erase(TID tid) {
    // TODO: add your implementation here
+   fsi.fsi_mutex.lock();
    // tid.get_page_id() does the same functionality of the XOR that was used in the schema_segment and fsi_segment.
    // Hence, we just pass the result page_id to buffer_manager
    // First, I need to find the slot that was previously allocated in allocate method. TID is used for that.
@@ -191,5 +192,6 @@ bool SPSegment::erase(TID tid) {
    slotted_page.erase(tid.get_slot());
    buffer_manager.unfix_page(page, true);
    fsi.update(tid.get_page_id(segment_id), slotted_page.get_free_space());
+   fsi.fsi_mutex.unlock();
    return true;
 }
