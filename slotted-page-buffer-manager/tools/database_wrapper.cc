@@ -170,7 +170,7 @@ void compareVectors(const std::vector<std::string> &vector1, const std::vector<s
             assert(false && "Vector elements are not equal");
         }
     }
-    std::cout << "Vectors are equal!" << std::endl;
+    // std::cout << "Vectors are equal!" << std::endl;
 }
 
 int main() {

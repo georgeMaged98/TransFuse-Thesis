@@ -128,8 +128,6 @@ void BufferManager::evict_page() {
    }
 }
 
-
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 char* BufferFrame::get_data() const {
@@ -209,17 +207,17 @@ std::shared_ptr<BufferFrame> BufferManager::fix_page(uint64_t page_id, bool excl
       buffer_frame->num_fixed += 1;
       buffer_frame->num_fixed_exc += (exclusive ? 1 : 0);
       bf_lock.unlock();
-      if(exclusive) {
-         std::cout << "Trying lock exc: \n";
+      if (exclusive) {
+         // std::cout << "Trying lock exc: \n";
          // buffer_frame->custom_latch.lock_exclusive();
          // if (buffer_frame->custom_latch.state.load() == CustomReadWriteLock::State::LOCKED_EXCLUSIVE) {
          //    std::cout << "Page already locked exclusively. BF id: " << page_id << "\n";
          // } else {
-            buffer_frame->custom_latch.lock_exclusive();
+         buffer_frame->custom_latch.lock_exclusive();
          buffer_frame->is_exclusive = true;
          // }
-      }else {
-         std::cout << "Trying lock shared: \n";
+      } else {
+         // std::cout << "Trying lock shared: \n";
          // if(buffer_frame->custom_latch.readers_count.load() > 0) {
          //    std::cout << "\n";
          // }
@@ -251,7 +249,7 @@ std::shared_ptr<BufferFrame> BufferManager::fix_page(uint64_t page_id, bool excl
    // Initialize Locks from file.
    int& readers_count_ref = *reinterpret_cast<int*>(new_frame->get_data_with_locks());
    const std::atomic_ref<int> readers_count_atomic(readers_count_ref);
-   new_frame->custom_latch.readers_count.store(readers_count_atomic.load());  // Use atomic_ref to load the readers count atomically
+   new_frame->custom_latch.readers_count.store(readers_count_atomic.load()); // Use atomic_ref to load the readers count atomically
    // Interpret the next sizeof(int) bytes of the data buffer as state
    int& state_ref = *reinterpret_cast<int*>(new_frame->get_data_with_locks() + sizeof(int));
    std::atomic_ref<int> state_atomic(state_ref);

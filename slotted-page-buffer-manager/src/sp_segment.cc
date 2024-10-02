@@ -30,7 +30,7 @@ TID SPSegment::allocate(uint32_t size) {
       auto slot_id = slotted_page->allocate(size, buffer_manager.get_page_size());
       auto &slot = slotted_page->get_slots()[slot_id];
       TID tid = TID(page_id, slot_id);
-      std::cout << "Allocating page " << page_id << " slot " << slot_id << " TID: " <<  tid.get_value() << "\n";
+      // std::cout << "Allocating page " << page_id << " slot " << slot_id << " TID: " <<  tid.get_value() << "\n";
       // Unfix the page
       buffer_manager.unfix_page(page, true);
       // sp_lock.unlock();
@@ -90,7 +90,7 @@ std::optional<uint32_t> SPSegment::read(TID tid, std::byte* record, uint32_t cap
 }
 
 uint32_t SPSegment::write(TID tid, std::byte* record, uint32_t record_size, bool is_update) {
-   std::cout << "Writing to page " << tid.get_page_id(segment_id) << " at slot " << tid.get_slot() << "\n";
+   // std::cout << "Writing to page " << tid.get_page_id(segment_id) << " at slot " << tid.get_slot() << "\n";
 
    // TODO: add your implementation here
    // The tid.get_page_id() does the same functionality of the XOR that was used in the schema_segment and fsi_segment.

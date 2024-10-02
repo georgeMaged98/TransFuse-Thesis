@@ -212,7 +212,7 @@ TEST_F(DatabaseOperationsTest, DeleteTupleTest) {
 TEST_F(DatabaseOperationsTest, MultithreadWriters) {
    auto db = moderndbs::Database();
    {
-      moderndbs::BufferManager buffer_manager(sysconf (_SC_PAGESIZE), 10);
+      moderndbs::BufferManager buffer_manager(sysconf (_SC_PAGESIZE), 50);
       moderndbs::SchemaSegment schema_segment(49, buffer_manager);
       schema_segment.set_schema(getTPCHOrderSchema());
       schema_segment.write();
@@ -221,7 +221,7 @@ TEST_F(DatabaseOperationsTest, MultithreadWriters) {
    auto &table = db.get_schema().tables[0];
    // Pre-allocate the tids vector to the correct size
    std::vector<moderndbs::TID> tids;
-   uint32_t insertions_per_thread = 100;
+   uint32_t insertions_per_thread = 2500;
    tids.reserve(4 * insertions_per_thread); // 4 threads
 
    std::barrier sync_point(4);

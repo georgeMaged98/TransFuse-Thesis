@@ -18,7 +18,7 @@ struct OrderRecord {
     class Database {
     public:
         /// Constructor.
-        Database() : buffer_manager(1024, 10) {}
+        Database() : buffer_manager(sysconf (_SC_PAGESIZE), 1000) {}
 
         /// Load a new schema
         void load_new_schema(std::unique_ptr<schema::Schema> schema);
