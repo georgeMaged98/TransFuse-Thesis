@@ -115,7 +115,7 @@ bool compareOrderRecords(const moderndbs::OrderRecord &record1, const moderndbs:
 TEST_F(DatabaseOperationsTest, WriteReadTest) {
    auto db = moderndbs::Database();
    {
-      FileMapper schema_file_mapper("schema_segment.txt", 1024);
+      FileMapper schema_file_mapper("schema_segment.txt", (sysconf (_SC_PAGESIZE)));
       moderndbs::SchemaSegment schema_segment(49, schema_file_mapper);
       schema_segment.set_schema(getTPCHOrderSchema());
       schema_segment.write();
@@ -146,7 +146,7 @@ TEST_F(DatabaseOperationsTest, WriteReadTest) {
 TEST_F(DatabaseOperationsTest, UpdateTupleTest) {
    auto db = moderndbs::Database();
    {
-      FileMapper schema_file_mapper("schema_segment.txt", 1024);
+      FileMapper schema_file_mapper("schema_segment.txt", (sysconf (_SC_PAGESIZE)));
       moderndbs::SchemaSegment schema_segment(49, schema_file_mapper);
       schema_segment.set_schema(getTPCHOrderSchema());
       schema_segment.write();
@@ -188,7 +188,7 @@ TEST_F(DatabaseOperationsTest, UpdateTupleTest) {
 TEST_F(DatabaseOperationsTest, DeleteTupleTest) {
    auto db = moderndbs::Database();
    {
-      FileMapper schema_file_mapper("schema_segment.txt", 1024);
+      FileMapper schema_file_mapper("schema_segment.txt", (sysconf (_SC_PAGESIZE)));
       moderndbs::SchemaSegment schema_segment(49, schema_file_mapper);
       schema_segment.set_schema(getTPCHOrderSchema());
       schema_segment.write();
@@ -213,7 +213,7 @@ TEST_F(DatabaseOperationsTest, DeleteTupleTest) {
 TEST_F(DatabaseOperationsTest, MultithreadWriters) {
    auto db = moderndbs::Database();
    {
-      FileMapper schema_file_mapper("schema_segment.txt", 1024);
+      FileMapper schema_file_mapper("schema_segment.txt", (sysconf (_SC_PAGESIZE)));
       moderndbs::SchemaSegment schema_segment(49, schema_file_mapper);
       schema_segment.set_schema(getTPCHOrderSchema());
       schema_segment.write();

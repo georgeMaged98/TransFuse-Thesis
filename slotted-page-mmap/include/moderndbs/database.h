@@ -19,7 +19,7 @@ struct OrderRecord {
 class Database {
    public:
    /// Constructor.
-   Database() : schema_file_mapper("schema_segment.txt", 1024), fsi_file_mapper("fsi_segment.txt", 1024), sp_file_mapper("sp_segment.txt", 1024) {}
+   Database() : schema_file_mapper("schema_segment.txt", (sysconf (_SC_PAGESIZE))), fsi_file_mapper("fsi_segment.txt", (sysconf (_SC_PAGESIZE))), sp_file_mapper("sp_segment.txt", (sysconf (_SC_PAGESIZE))) {}
 
    /// Load a new schema
    void load_new_schema(std::unique_ptr<schema::Schema> schema);

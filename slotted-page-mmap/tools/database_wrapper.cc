@@ -95,68 +95,6 @@ void readLine(int &v) {
     catch (...) {}
 }
 
-//int main() {
-//    auto db = moderndbs::Database();
-//
-//    int choice = 0;
-//    do {
-//        std::cout << "(1) Load schema from segment\n";
-//        std::cout << "(2) Load TPCH-like schema\n";
-//        std::cout << "> " << std::flush;
-//        readLine(choice);
-//    } while (choice != 1 && choice != 2);
-//    if (choice == 1) {
-//        // only support schema in segment 0 for now
-//        db.load_schema(0);
-//    } else if (choice == 2) {
-//        db.load_new_schema(moderndbs::getTPCHSchemaLight());
-//    }
-//
-//    while (true) {
-//        do {
-//            std::cout << "(1) insert\n";
-//            std::cout << "(2) read\n";
-//            std::cout << "> " << std::flush;
-//            readLine(choice);
-//        } while (choice != 1 && choice != 2);
-//        if (choice == 1) {
-//            do {
-//                std::cout << "Select table:\n";
-//                for (size_t i = 0; i < db.get_schema().tables.size(); ++i) {
-//                    std::cout << "(" << i << ") " << db.get_schema().tables[i].id << "\n";
-//                }
-//                std::cout << "> " << std::flush;
-//                readLine(choice);
-//            } while (choice < 0 || size_t(choice) >= db.get_schema().tables.size());
-//            auto &table = db.get_schema().tables[choice];
-//            auto values = std::vector<std::string>();
-//            for (const auto &column : table.columns) {
-//                std::cout << "Value for " << column.id << "(" << column.type.name() << ")";
-//                std::cout << " > " << std::flush;
-//                std::string value;
-//                readLine(value);
-//                values.emplace_back(move(value));
-//            }
-//            db.insert(table, values);
-//        } else if (choice == 2) {
-//            do {
-//                std::cout << "Select table:\n";
-//                for (size_t i = 0; i < db.get_schema().tables.size(); ++i) {
-//                    std::cout << "(" << i << ") " << db.get_schema().tables[i].id << "\n";
-//                }
-//                std::cout << "> " << std::flush;
-//                readLine(choice);
-//            } while (choice < 0 || size_t(choice) >= db.get_schema().tables.size());
-//            auto &table = db.get_schema().tables[choice];
-//            std::cout << "Enter TID:\n";
-//            std::cout << "> " << std::flush;
-//            readLine(choice);
-//            db.read_tuple(table, moderndbs::TID(choice));
-//        }
-//    }
-
-//} // namespace moderndbs
-
 void compareVectors(const std::vector<std::string> &vector1, const std::vector<std::string> &vector2) {
     // First, check if the sizes are the same
     assert(vector1.size() == vector2.size() && "Vectors are of different sizes");
@@ -176,7 +114,7 @@ void compareVectors(const std::vector<std::string> &vector1, const std::vector<s
 int main() {
    auto db = moderndbs::Database();
    {
-      moderndbs::FileMapper schema_file_mapper("schema_segment.txt", 1024);
+      moderndbs::FileMapper schema_file_mapper("/tmp/transfuse_mnt/schema_segment.txt", (sysconf (_SC_PAGESIZE)));
       moderndbs::SchemaSegment schema_segment(49, schema_file_mapper);
       schema_segment.set_schema(moderndbs::getTPCHOrderSchema());
       schema_segment.write();
@@ -186,22 +124,18 @@ int main() {
    auto &table = db.get_schema().tables[0];
    std::vector<moderndbs::TID> tids;
    // Insert into table and read from it immediately
-   for (uint64_t i = 0;i < 50; ++i) {
-      auto values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
-      auto tid = db.insert(table, values);
+   for (uint64_t i = 0;i < 1500; ++i) {
+      moderndbs::OrderRecord order = {i,i * 2,i * 100,i % 5,(i % 2 == 0 ? 'G' : 'H')};
+      auto tid = db.insert(table, order);
       tids.push_back(tid);
       auto result = db.read_tuple(table, tid);
-      // ASSERT_TRUE(result);
-      // ASSERT_TRUE(compareVectors(values, result.value()));
-   }
-   // Now read inserted tids again
-   for (uint64_t i = 0;i < 50; ++i) {
-      auto expected_values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
-      auto result = db.read_tuple(table, tids[i]);
-      // ASSERT_TRUE(result);
-      // ASSERT_TRUE(compareVectors(expected_values, result.value()));
    }
 
+   // Now read inserted tids again
+   for (uint64_t i = 0;i < 1500; ++i) {
+      moderndbs::OrderRecord expected_order = {i,i * 2,i * 100,i % 5,(i % 2 == 0 ? 'G' : 'H')};
+      auto result = db.read_tuple(table, tids[i]);
+   }
    // std::mt19937_64 engine{0};
    // std::uniform_int_distribution<uint64_t> page{0, 39};
    // std::uniform_int_distribution<uint64_t> slot{0, 37};

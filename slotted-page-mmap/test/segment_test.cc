@@ -77,7 +77,7 @@ struct SegmentTest : ::testing::Test {
 
 // NOLINTNEXTLINE
 TEST_F(SegmentTest, SchemaSetter) {
-   FileMapper schema_file_mapper("schema_segment.txt", 1024);
+   FileMapper schema_file_mapper("schema_segment.txt", (sysconf (_SC_PAGESIZE)));
    SchemaSegment schema_segment(0, schema_file_mapper);
    EXPECT_EQ(nullptr, schema_segment.get_schema());
    auto schema = getTPCHSchemaLight();
@@ -88,7 +88,7 @@ TEST_F(SegmentTest, SchemaSetter) {
 
 // NOLINTNEXTLINE
 TEST_F(SegmentTest, SchemaSerialiseEmptySchema) {
-   FileMapper schema_file_mapper("schema_segment.txt", 1024);
+   FileMapper schema_file_mapper("schema_segment.txt", (sysconf (_SC_PAGESIZE)));
    SchemaSegment schema_segment_1(0, schema_file_mapper);
    auto schema = std::make_unique<schema::Schema>(std::vector<schema::Table>{});
    schema_segment_1.set_schema(std::move(schema));
@@ -101,7 +101,7 @@ TEST_F(SegmentTest, SchemaSerialiseEmptySchema) {
 
 // NOLINTNEXTLINE
 TEST_F(SegmentTest, SchemaSerialiseTPCHLight) {
-   FileMapper schema_file_mapper("schema_segment.txt", 1024);
+   FileMapper schema_file_mapper("schema_segment.txt", (sysconf (_SC_PAGESIZE)));
    SchemaSegment schema_segment_1(0, schema_file_mapper);
    auto schema_1 = getTPCHSchemaLight();
    schema_segment_1.set_schema(std::move(schema_1));
@@ -165,9 +165,9 @@ TEST_F(SegmentTest, SchemaSerialiseTPCHLight) {
 }
 
 // NOLINTNEXTLINE
-TEST_F(SegmentTest, FSIEncoding) { FileMapper schema_file_mapper("schema_segment.txt", 1024);
-   FileMapper fsi_file_mapper("fsi_segment.txt", 1024);
-   FileMapper sp_file_mapper("sp_segment.txt", 1024);
+TEST_F(SegmentTest, FSIEncoding) { FileMapper schema_file_mapper("schema_segment.txt", (sysconf (_SC_PAGESIZE)));
+   FileMapper fsi_file_mapper("fsi_segment.txt", (sysconf (_SC_PAGESIZE)));
+   FileMapper sp_file_mapper("sp_segment.txt", (sysconf (_SC_PAGESIZE)));
 
    auto table = schema::Table{
       "nation",
@@ -182,7 +182,7 @@ TEST_F(SegmentTest, FSIEncoding) { FileMapper schema_file_mapper("schema_segment
       21,
       0};
    FSISegment fsi_segment(1, fsi_file_mapper, table);
-   for (int i = 0; i < 1024; ++i) {
+   for (int i = 0; i < (sysconf (_SC_PAGESIZE)); ++i) {
       auto encoded = fsi_segment.encode_free_space(i);
       auto decoded = fsi_segment.decode_free_space(encoded);
       ASSERT_LE(decoded, i) << "i=" << i << " encoded=" << std::to_string(encoded) << " decoded=" << decoded;
@@ -191,9 +191,9 @@ TEST_F(SegmentTest, FSIEncoding) { FileMapper schema_file_mapper("schema_segment
 
 // NOLINTNEXTLINE
 TEST_F(SegmentTest, FSIFind) {
-   FileMapper schema_file_mapper("schema_segment.txt", 1024);
-   FileMapper fsi_file_mapper("fsi_segment.txt", 1024);
-   FileMapper sp_file_mapper("sp_segment.txt", 1024);
+   FileMapper schema_file_mapper("schema_segment.txt", (sysconf (_SC_PAGESIZE)));
+   FileMapper fsi_file_mapper("fsi_segment.txt", (sysconf (_SC_PAGESIZE)));
+   FileMapper sp_file_mapper("sp_segment.txt", (sysconf (_SC_PAGESIZE)));
    SchemaSegment schema_segment(0, schema_file_mapper);
    schema_segment.set_schema(getTPCHSchemaLight());
    auto& table = schema_segment.get_schema()->tables[0];
@@ -210,8 +210,8 @@ TEST_F(SegmentTest, FSIFind) {
 
 // NOLINTNEXTLINE
 TEST_F(SegmentTest, FSIPersistence) {
-   FileMapper schema_file_mapper("schema_segment.txt", 1024);
-   FileMapper fsi_file_mapper("fsi_segment.txt", 1024);
+   FileMapper schema_file_mapper("schema_segment.txt", (sysconf (_SC_PAGESIZE)));
+   FileMapper fsi_file_mapper("fsi_segment.txt", (sysconf (_SC_PAGESIZE)));
    SchemaSegment schema_segment(0, schema_file_mapper);
    schema_segment.set_schema(getTPCHSchemaLight());
    auto& table = schema_segment.get_schema()->tables[0];
@@ -238,15 +238,15 @@ TEST_F(SegmentTest, FSIPersistence) {
 
 // NOLINTNEXTLINE
 TEST_F(SegmentTest, SPRecordAllocation) {
-   FileMapper schema_file_mapper("schema_segment.txt", 1024);
-   FileMapper fsi_file_mapper("fsi_segment.txt", 1024);
-   FileMapper sp_file_mapper("sp_segment.txt", 1024);
+   FileMapper schema_file_mapper("schema_segment.txt", (sysconf (_SC_PAGESIZE)));
+   FileMapper fsi_file_mapper("fsi_segment.txt", (sysconf (_SC_PAGESIZE)));
+   FileMapper sp_file_mapper("sp_segment.txt", (sysconf (_SC_PAGESIZE)));
    SchemaSegment schema_segment(0, schema_file_mapper);
    schema_segment.set_schema(getTPCHSchemaLight());
    auto& table = schema_segment.get_schema()->tables[0];
    FSISegment fsi_segment(table.fsi_segment, fsi_file_mapper, table);
    SPSegment sp_segment(table.sp_segment, sp_file_mapper, schema_segment, fsi_segment, table);
-   auto max = 1024 - sizeof(SlottedPage::Slot) - sizeof(SlottedPage::Header) - 17;
+   auto max = (sysconf (_SC_PAGESIZE)) - sizeof(SlottedPage::Slot) - sizeof(SlottedPage::Header) - 17;
    for (uint64_t i = 1; i < max; i *= 2) {
       sp_segment.allocate(i);
    }
@@ -256,15 +256,15 @@ TEST_F(SegmentTest, SPRecordAllocation) {
 // NOLINTNEXTLINE
 TEST_F(SegmentTest, SPRecordWriteRead) {
    auto schema = getTPCHSchemaLight();
-   FileMapper schema_file_mapper("schema_segment.txt", 1024);
-   FileMapper fsi_file_mapper("fsi_segment.txt", 1024);
-   FileMapper sp_file_mapper("sp_segment.txt", 1024);
+   FileMapper schema_file_mapper("schema_segment.txt", (sysconf (_SC_PAGESIZE)));
+   FileMapper fsi_file_mapper("fsi_segment.txt", (sysconf (_SC_PAGESIZE)));
+   FileMapper sp_file_mapper("sp_segment.txt", (sysconf (_SC_PAGESIZE)));
    SchemaSegment schema_segment(0, schema_file_mapper);
    schema_segment.set_schema(getTPCHSchemaLight());
    auto& table = schema_segment.get_schema()->tables[0];
    FSISegment fsi_segment(table.fsi_segment, fsi_file_mapper, table);
    SPSegment sp_segment(table.sp_segment, sp_file_mapper, schema_segment, fsi_segment, table);
-   auto max = 1024 - sizeof(SlottedPage::Slot) - sizeof(SlottedPage::Header) - sizeof(TID);
+   auto max = (sysconf (_SC_PAGESIZE)) - sizeof(SlottedPage::Slot) - sizeof(SlottedPage::Header) - sizeof(TID);
 
    // Sequential allocation - write - read
    std::vector<TID> tids;
@@ -296,18 +296,18 @@ TEST_F(SegmentTest, SPRecordWriteRead) {
 
 // NOLINTNEXTLINE
 TEST_F(SegmentTest, SPRecordWriteReadRedirect) {
-   FileMapper schema_file_mapper("schema_segment.txt", 1024);
-   FileMapper fsi_file_mapper("fsi_segment.txt", 1024);
-   FileMapper sp_file_mapper("sp_segment.txt", 1024);
+   FileMapper schema_file_mapper("schema_segment.txt", (sysconf (_SC_PAGESIZE)));
+   FileMapper fsi_file_mapper("fsi_segment.txt", (sysconf (_SC_PAGESIZE)));
+   FileMapper sp_file_mapper("sp_segment.txt", (sysconf (_SC_PAGESIZE)));
    SchemaSegment schema_segment(0, schema_file_mapper);
    schema_segment.set_schema(getTPCHSchemaLight());
    auto& table = schema_segment.get_schema()->tables[0];
    FSISegment fsi_segment(table.fsi_segment, fsi_file_mapper, table);
    SPSegment sp_segment(table.sp_segment, sp_file_mapper, schema_segment, fsi_segment, table);
    auto record_size = sizeof(uint64_t);
-   auto max = 1024 - sizeof(SlottedPage::Header);
+   auto max = (sysconf (_SC_PAGESIZE)) - sizeof(SlottedPage::Header);
    auto max_records = max / (record_size + sizeof(SlottedPage::Slot) + sizeof(TID));
-   auto max_record_size = 1024 - sizeof(SlottedPage::Header) - sizeof(SlottedPage::Slot) - sizeof(TID);
+   auto max_record_size = (sysconf (_SC_PAGESIZE)) - sizeof(SlottedPage::Header) - sizeof(SlottedPage::Slot) - sizeof(TID);
    std::vector<TID> tids;
    std::vector<size_t> sizes;
 
@@ -361,15 +361,15 @@ TEST_F(SegmentTest, SPRecordWriteReadRedirect) {
 // NOLINTNEXTLINE
 TEST_F(SegmentTest, SPRecordErase) {
    auto schema = getTPCHSchemaLight();
-   FileMapper schema_file_mapper("schema_segment.txt", 1024);
-   FileMapper fsi_file_mapper("fsi_segment.txt", 1024);
-   FileMapper sp_file_mapper("sp_segment.txt", 1024);
+   FileMapper schema_file_mapper("schema_segment.txt", (sysconf (_SC_PAGESIZE)));
+   FileMapper fsi_file_mapper("fsi_segment.txt", (sysconf (_SC_PAGESIZE)));
+   FileMapper sp_file_mapper("sp_segment.txt", (sysconf (_SC_PAGESIZE)));
    SchemaSegment schema_segment(0, schema_file_mapper);
    schema_segment.set_schema(getTPCHSchemaLight());
    auto& table = schema_segment.get_schema()->tables[0];
    FSISegment fsi_segment(table.fsi_segment, fsi_file_mapper, table);
    SPSegment sp_segment(table.sp_segment, sp_file_mapper, schema_segment, fsi_segment, table);
-   auto max = 1024 - sizeof(SlottedPage::Slot) - sizeof(SlottedPage::Header) - 17;
+   auto max = (sysconf (_SC_PAGESIZE)) - sizeof(SlottedPage::Slot) - sizeof(SlottedPage::Header) - 17;
 
    // Allocate a full page
    auto tid = sp_segment.allocate(max);
@@ -393,8 +393,8 @@ TEST_F(SegmentTest, SPRecordErase) {
    page = reinterpret_cast<SlottedPage*>(frame->get_data());
    ASSERT_EQ(page->header.slot_count, 0);
    ASSERT_EQ(page->header.first_free_slot, 0);
-   ASSERT_EQ(page->header.free_space, 1024 - sizeof(SlottedPage::Header) - 17);
-   ASSERT_EQ(page->header.data_start, 1024 - 17);
+   ASSERT_EQ(page->header.free_space, (sysconf (_SC_PAGESIZE)) - sizeof(SlottedPage::Header) - 17);
+   ASSERT_EQ(page->header.data_start, (sysconf (_SC_PAGESIZE)) - 17);
    // file_mapper.unfix_page(*frame, true);
 }
 
@@ -402,7 +402,7 @@ TEST_F(SegmentTest, SPRecordErase) {
 // TEST_F(SegmentTest, SPFuzzing) {
 //    size_t count = 100;
 //
-//    FileMapper file_mapper("0", 1024);
+//    FileMapper file_mapper("0", (sysconf (_SC_PAGESIZE)));
 //    SchemaSegment schema_segment(0, file_mapper);
 //    schema_segment.set_schema(getTPCHSchemaLight());
 //    auto& table = schema_segment.get_schema()->tables[0];
