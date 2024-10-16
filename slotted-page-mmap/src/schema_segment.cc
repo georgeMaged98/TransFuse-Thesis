@@ -49,7 +49,7 @@ void SchemaSegment::read() {
    // Load the first page
    // auto& page = buffer_manager.fix_page(static_cast<uint64_t>(segment_id) << 48, false);
    auto page = file_mapper.get_page(0, false);
-   auto page_size = file_mapper.get_page_size();
+   auto page_size = file_mapper.get_data_size();
 
    // [0-8[   : Schema string length in #bytes
    auto schema_size = *reinterpret_cast<uint64_t*>(page->get_data());
@@ -136,7 +136,7 @@ void SchemaSegment::write() {
    // Load the first page
    // auto& page = buffer_manager.fix_page(static_cast<uint64_t>(segment_id) << 48, true);
    auto page = file_mapper.get_page(0, true);
-   auto page_size = file_mapper.get_page_size();
+   auto page_size = file_mapper.get_data_size();
 
    // [0-8[   : Schema string length in #bytes
    if (!schema) {

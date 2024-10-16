@@ -8,6 +8,7 @@
 #include "custom_read_writer_lock.h"
 
 #include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <shared_mutex>
@@ -30,7 +31,14 @@ class Page {
    explicit Page(char* mapped_data, size_t page_size) {
       size_t offset = 0;
 
-      // Map the id field (first part of the mapped_data)
+      // readers_count and state mapped from file
+      readers_count = reinterpret_cast<int*>(mapped_data + offset);
+      offset += sizeof(int);
+
+      state = reinterpret_cast<int*>(mapped_data + offset);
+      offset += sizeof(int);
+
+      // id, count, exclusive fields mapped from file
       id = reinterpret_cast<size_t*>(mapped_data + offset);
       offset += sizeof(size_t);
 
@@ -57,13 +65,17 @@ class Page {
    void set_id(const size_t new_id) const { *id = new_id; }
    void set_count(const size_t new_count) const { *count = new_count; }
    void set_exclusive(bool is_exclusive) const { *exclusive = is_exclusive; }
+   void set_readers_count(const int new_readers_count) const { *readers_count = new_readers_count; }
+   void set_state(const int new_state) const { *state = new_state; }
 
    /// Returns a pointer to this page's data.
    [[nodiscard]] size_t get_id() const { return *id; }
    [[nodiscard]] size_t get_count() const { return *count; }
    [[nodiscard]] bool is_exclusive() const { return *exclusive; }
-   [[nodiscard]] char* get_data() const { return data /*+ 2 * sizeof(int)*/; }
-   [[nodiscard]] char* get_data_with_locks() const { return data; }
+
+   // Get the raw data pointer
+   [[nodiscard]] char* get_data() const { return data; }
+   [[nodiscard]] char* get_data_with_header() { return reinterpret_cast<char*>(readers_count); }
 
    // custom latch
    CustomReadWriteLock custom_latch;
@@ -71,6 +83,8 @@ class Page {
    private:
    friend class Segment;
 
+   int* readers_count = nullptr;
+   int* state = nullptr;
    size_t* id = nullptr;
    size_t* count = nullptr;
    bool* exclusive = nullptr;
@@ -85,6 +99,9 @@ class FileMapper {
    static constexpr uint64_t minMmapFileSize = 1LL << 30; // 32KB
 
    public:
+   static constexpr uint32_t headerSize = 2 * sizeof(size_t) + 1;
+   static constexpr uint32_t lockDataSize = 2 * sizeof(int);
+
    FileMapper(std::string filename, size_t page_size);
 
    ~FileMapper();
@@ -94,6 +111,8 @@ class FileMapper {
    void release_page(std::shared_ptr<Page> page);
 
    [[nodiscard]] size_t get_page_size() const { return page_size_; }
+
+   [[nodiscard]] size_t get_data_size() const { return page_size_ - headerSize - lockDataSize; } // id, count, exclusive, readers_count, state
 
    void write_to_file(const void* data, size_t size) const;
 

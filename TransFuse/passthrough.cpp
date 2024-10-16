@@ -44,6 +44,8 @@
 #include <dirent.h>
 #include <cerrno>
 #include <iostream>
+#include <sys/socket.h>
+#include <sys/un.h>
 
 #ifdef __FreeBSD__
 #include <sys/socket.h>
@@ -53,6 +55,8 @@
 #ifdef HAVE_SETXATTR
 #include <sys/xattr.h>
 #endif
+
+#include <atomic>
 
 #include "passthrough_helpers.h"
 
@@ -406,6 +410,57 @@ static int transfuse_read(const char *path, char *buf, const size_t size, const 
     return res;
 }
 
+void notifyDatabase(const char* filePath, const uint64_t pageNo) {
+    // int sock;
+    // struct sockaddr_un addr;
+    // const char* msg = "Invalid write detected";
+    //
+    // sock = socket(AF_UNIX, SOCK_STREAM, 0);
+    // addr.sun_family = AF_UNIX;
+    // strcpy(addr.sun_path, "/tmp/db_socket");
+    //
+    // connect(sock, (struct sockaddr*)&addr, sizeof(addr));
+    // send(sock, msg, strlen(msg), 0);
+    //
+    // close(sock);
+    std::string message = std::string(filePath) + std::to_string(pageNo);
+    int client_sock;
+    struct sockaddr_un addr;
+
+    // Create a socket
+    client_sock = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (client_sock < 0) {
+        std::cerr << "Failed to create socket: " << strerror(errno) << std::endl;
+        return;
+    }
+    std::cout << "Client socket created.\n";
+
+    // Setup socket address
+    addr.sun_family = AF_UNIX;
+    strcpy(addr.sun_path, "/tmp/db_socket");
+
+    // Connect to the server
+    if (connect(client_sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+        std::cerr << "Failed to connect to server: " << strerror(errno) << std::endl;
+        close(client_sock);
+        return;
+    }
+
+    std::cout << "Connected to server.\n";
+
+
+    // Send error message
+    ssize_t bytes_sent = send(client_sock, message.c_str(), strlen(message.c_str()), 0);
+    if (bytes_sent < 0) {
+        std::cerr << "Failed to send message: " << strerror(errno) << std::endl;
+    } else {
+        std::cout << "Message sent to server: " << message << std::endl;
+    }
+
+    // Clean up
+    close(client_sock);
+}
+
 
 static int transfuse_write(const char *path, const char *buf, const size_t size,
                            off_t offset, struct fuse_file_info *fi) {
@@ -417,7 +472,10 @@ static int transfuse_write(const char *path, const char *buf, const size_t size,
     snprintf(fpath, sizeof(fpath), "%s%s", fuse_root_dir, path);
 
     // Log the constructed path for debugging
-    printf(" --> transfuse_write() and path is %s -> fpath: %s. Offset is: %ld and Size is: %lu\n", path, fpath, offset, size);
+    // printf(" --> transfuse_write() and path is %s -> fpath: %s. Offset is: %ld and Size is: %lu\n", path, fpath, offset, size);
+
+    printf(" --> transfuse_write() and path is %s. Offset: %ld and Size: %lu\n", path, offset, size);
+
 
     // Open the file if the file info is NULL
     if (fi == nullptr || fi->fh == 0) {
@@ -430,12 +488,62 @@ static int transfuse_write(const char *path, const char *buf, const size_t size,
         fd = fi->fh;
     }
 
-    // Perform the write operation
-    res = pwrite(fd, buf, size, offset);
-    if (res == -1) {
-        perror("Error writing to file");
-        res = -errno;
+    // Ensure that only 4KB (4096 bytes) are written at a time
+    size_t remaining_size = size;
+    const size_t page_size = sysconf(_SC_PAGE_SIZE);
+    const char *write_buf = buf;
+    off_t current_offset = offset;
+
+    while (remaining_size > 0) {
+        size_t write_size = (remaining_size > page_size) ? page_size : remaining_size;
+
+        // while (current_offset + sizeof(int) <= write_size) {
+        //     // Cast the current position of the buffer as an integer and dereference it
+        //     int value = *reinterpret_cast<const int *>(write_buf + current_offset);
+        //
+        //     // Print the integer value
+        //     std::cout << " int " << value << "   ";
+        //
+        //     // Move to the next integer (increase offset by the size of an int)
+        //     current_offset += sizeof(int);
+        // }
+        int readers_count_ref = *reinterpret_cast<const int *>(write_buf + current_offset);
+        int state = *reinterpret_cast<const int*>(write_buf + current_offset + sizeof(int));
+        printf("First int: %d, Second int: %d\n", readers_count_ref, state);
+
+        if (state == 2) {
+            notifyDatabase(path, current_offset);
+            res = -EINVAL;
+            printf(" --> FAILED TO WRITE %zu bytes to %s at offset %ld\n", write_size, fpath, current_offset);
+            remaining_size -= write_size;
+            write_buf += write_size;
+            current_offset += write_size;
+            continue;
+        }
+        // Perform the write operation in chunks of 4KB or less
+        res = pwrite(fd, write_buf, write_size, current_offset);
+        printf(" --> ACTUALLY Wrote %zu bytes to %s at offset %ld\n", write_size, fpath, current_offset);
+
+        if (res == -1) {
+            perror("Error writing to file");
+            res = -errno;
+            break;
+        }
+
+        // Update the remaining size, buffer pointer, and offset
+        remaining_size -= write_size;
+        write_buf += write_size;
+        current_offset += write_size;
+
+        // Log the size of the current write operation
     }
+
+    // Perform the write operation
+    // res = pwrite(fd, buf, size, offset);
+    // if (res == -1) {
+    //     perror("Error writing to file");
+    //     res = -errno;
+    // }
 
     // Close the file if it was opened in this function
     if (fi == nullptr || fi->fh == 0) {

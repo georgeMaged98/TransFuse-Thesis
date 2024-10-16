@@ -25,7 +25,7 @@ TID SPSegment::allocate(uint32_t size) {
       auto* page_data = page->get_data();
       // If the page is already there, it's sufficient to use reinterpret_cast<SlottedPage*>
       auto* slotted_page = reinterpret_cast<SlottedPage*>(page_data);
-      auto slot_id = slotted_page->allocate(size, file_mapper.get_page_size() - 17);
+      auto slot_id = slotted_page->allocate(size, file_mapper.get_data_size());
       // Unfix the page
       // file_mapper.unfix_page(page, true);
       file_mapper.release_page(page);
@@ -41,8 +41,8 @@ TID SPSegment::allocate(uint32_t size) {
    //  Create new slotted page -> Update Number of Slotted Pages in Table
    auto new_page_id = table.allocated_pages++;
    auto page = file_mapper.get_page(new_page_id, true);
-   auto* slotted_page = new (page->get_data()) SlottedPage(file_mapper.get_page_size() - 17);
-   const uint16_t slot_id = slotted_page->allocate(size, file_mapper.get_page_size() - 17);
+   auto* slotted_page = new (page->get_data()) SlottedPage(file_mapper.get_data_size());
+   const uint16_t slot_id = slotted_page->allocate(size, file_mapper.get_data_size());
 
    const auto tid = TID(new_page_id, slot_id);
    // Unfix the page

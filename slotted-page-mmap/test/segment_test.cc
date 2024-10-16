@@ -246,7 +246,7 @@ TEST_F(SegmentTest, SPRecordAllocation) {
    auto& table = schema_segment.get_schema()->tables[0];
    FSISegment fsi_segment(table.fsi_segment, fsi_file_mapper, table);
    SPSegment sp_segment(table.sp_segment, sp_file_mapper, schema_segment, fsi_segment, table);
-   auto max = (sysconf (_SC_PAGESIZE)) - sizeof(SlottedPage::Slot) - sizeof(SlottedPage::Header) - 17;
+   auto max = (sysconf (_SC_PAGESIZE)) - sizeof(SlottedPage::Slot) - sizeof(SlottedPage::Header) - FileMapper::headerSize;
    for (uint64_t i = 1; i < max; i *= 2) {
       sp_segment.allocate(i);
    }
@@ -264,7 +264,7 @@ TEST_F(SegmentTest, SPRecordWriteRead) {
    auto& table = schema_segment.get_schema()->tables[0];
    FSISegment fsi_segment(table.fsi_segment, fsi_file_mapper, table);
    SPSegment sp_segment(table.sp_segment, sp_file_mapper, schema_segment, fsi_segment, table);
-   auto max = (sysconf (_SC_PAGESIZE)) - sizeof(SlottedPage::Slot) - sizeof(SlottedPage::Header) - sizeof(TID);
+   auto max = (sysconf (_SC_PAGESIZE)) - sizeof(SlottedPage::Slot) - sizeof(SlottedPage::Header) - sizeof(TID) - FileMapper::headerSize;
 
    // Sequential allocation - write - read
    std::vector<TID> tids;
@@ -369,7 +369,7 @@ TEST_F(SegmentTest, SPRecordErase) {
    auto& table = schema_segment.get_schema()->tables[0];
    FSISegment fsi_segment(table.fsi_segment, fsi_file_mapper, table);
    SPSegment sp_segment(table.sp_segment, sp_file_mapper, schema_segment, fsi_segment, table);
-   auto max = (sysconf (_SC_PAGESIZE)) - sizeof(SlottedPage::Slot) - sizeof(SlottedPage::Header) - 17;
+   auto max = (sysconf (_SC_PAGESIZE)) - sizeof(SlottedPage::Slot) - sizeof(SlottedPage::Header) - FileMapper::headerSize - FileMapper::lockDataSize ;
 
    // Allocate a full page
    auto tid = sp_segment.allocate(max);
@@ -393,8 +393,8 @@ TEST_F(SegmentTest, SPRecordErase) {
    page = reinterpret_cast<SlottedPage*>(frame->get_data());
    ASSERT_EQ(page->header.slot_count, 0);
    ASSERT_EQ(page->header.first_free_slot, 0);
-   ASSERT_EQ(page->header.free_space, (sysconf (_SC_PAGESIZE)) - sizeof(SlottedPage::Header) - 17);
-   ASSERT_EQ(page->header.data_start, (sysconf (_SC_PAGESIZE)) - 17);
+   ASSERT_EQ(page->header.free_space, (sysconf (_SC_PAGESIZE)) - sizeof(SlottedPage::Header) - FileMapper::headerSize - FileMapper::lockDataSize);
+   ASSERT_EQ(page->header.data_start, (sysconf (_SC_PAGESIZE)) - FileMapper::headerSize - FileMapper::lockDataSize);
    // file_mapper.unfix_page(*frame, true);
 }
 

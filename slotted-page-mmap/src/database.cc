@@ -9,7 +9,7 @@ moderndbs::TID moderndbs::Database::insert(const schema::Table& table, OrderReco
    auto tid = sp.allocate(order_size);
    // Write the data to the segment
    sp.write(tid, data, order_size);
-   std::cout << "Tuple with TID " << tid.get_value() << " inserted!\n";
+   std::cout << "Tuple with TID " << tid.get_value() << " Page " << tid.get_page_id(0) << "  SLOT  " << tid.get_slot() << " inserted!\n";
    return tid;
 }
 

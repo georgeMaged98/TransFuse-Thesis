@@ -12,7 +12,7 @@ uint8_t FSISegment::encode_free_space(uint32_t free_space) {
     // free size / (page size / (2^bits) )
     // bits = 4 in this example (CHECK line 76 in segment.h)
     // pow(2, 4) = 16
-    uint8_t encoded_free_space = free_space / ((file_mapper.get_page_size() - 17 ) / 16);
+    uint8_t encoded_free_space = free_space / ((file_mapper.get_data_size()) / 16);
 
     //   uint8_t encoded_free_space = ceil(log2(free_space));
     return static_cast<uint8_t>(encoded_free_space);
@@ -21,7 +21,7 @@ uint8_t FSISegment::encode_free_space(uint32_t free_space) {
 uint32_t FSISegment::decode_free_space(uint8_t free_space) {
     // TODO: add your implementation here
     // Linear scale
-   const auto decoded_free_space = static_cast<uint32_t>(free_space * ((file_mapper.get_page_size() - 17 ) / 16));
+   const auto decoded_free_space = static_cast<uint32_t>(free_space * ((file_mapper.get_data_size()) / 16));
     // Logarithmic scale
     //   uint32_t decoded_free_space = (uint32_t) pow(2, free_space - 1);
     return decoded_free_space;

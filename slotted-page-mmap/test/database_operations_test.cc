@@ -103,7 +103,7 @@ bool compareOrderRecords(const moderndbs::OrderRecord &record1, const moderndbs:
     protected:
       void SetUp() override {
          using moderndbs::File;
-         for (const auto* segment_file : std::vector<const char*>{"fsi_segment.txt", "sp_segment.txt", "schema_segment.txt"}) {
+         for (const auto* segment_file : std::vector<const char*>{"/tmp/transfuse_mnt/fsi_segment.txt", "/tmp/transfuse_mnt/sp_segment.txt", "/tmp/transfuse_mnt/schema_segment.txt"}) {
             auto file = File::open_file(segment_file, File::Mode::WRITE);
             file->resize(0);
          }
@@ -115,7 +115,7 @@ bool compareOrderRecords(const moderndbs::OrderRecord &record1, const moderndbs:
 TEST_F(DatabaseOperationsTest, WriteReadTest) {
    auto db = moderndbs::Database();
    {
-      FileMapper schema_file_mapper("schema_segment.txt", (sysconf (_SC_PAGESIZE)));
+      FileMapper schema_file_mapper("/tmp/transfuse_mnt/schema_segment.txt", (sysconf (_SC_PAGESIZE)));
       moderndbs::SchemaSegment schema_segment(49, schema_file_mapper);
       schema_segment.set_schema(getTPCHOrderSchema());
       schema_segment.write();
@@ -146,7 +146,7 @@ TEST_F(DatabaseOperationsTest, WriteReadTest) {
 TEST_F(DatabaseOperationsTest, UpdateTupleTest) {
    auto db = moderndbs::Database();
    {
-      FileMapper schema_file_mapper("schema_segment.txt", (sysconf (_SC_PAGESIZE)));
+      FileMapper schema_file_mapper("/tmp/transfuse_mnt/schema_segment.txt", (sysconf (_SC_PAGESIZE)));
       moderndbs::SchemaSegment schema_segment(49, schema_file_mapper);
       schema_segment.set_schema(getTPCHOrderSchema());
       schema_segment.write();
@@ -188,7 +188,7 @@ TEST_F(DatabaseOperationsTest, UpdateTupleTest) {
 TEST_F(DatabaseOperationsTest, DeleteTupleTest) {
    auto db = moderndbs::Database();
    {
-      FileMapper schema_file_mapper("schema_segment.txt", (sysconf (_SC_PAGESIZE)));
+      FileMapper schema_file_mapper("/tmp/transfuse_mnt/schema_segment.txt", (sysconf (_SC_PAGESIZE)));
       moderndbs::SchemaSegment schema_segment(49, schema_file_mapper);
       schema_segment.set_schema(getTPCHOrderSchema());
       schema_segment.write();
@@ -213,7 +213,7 @@ TEST_F(DatabaseOperationsTest, DeleteTupleTest) {
 TEST_F(DatabaseOperationsTest, MultithreadWriters) {
    auto db = moderndbs::Database();
    {
-      FileMapper schema_file_mapper("schema_segment.txt", (sysconf (_SC_PAGESIZE)));
+      FileMapper schema_file_mapper("/tmp/transfuse_mnt/schema_segment.txt", (sysconf (_SC_PAGESIZE)));
       moderndbs::SchemaSegment schema_segment(49, schema_file_mapper);
       schema_segment.set_schema(getTPCHOrderSchema());
       schema_segment.write();
