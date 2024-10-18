@@ -61,7 +61,7 @@ void FSISegment::update(uint64_t target_page, uint32_t free_space) {
 std::optional<uint64_t> FSISegment::find(uint32_t required_space) {
     /// TODO: add your implementation here
     // auto &page = buffer_manager.fix_page(static_cast<uint64_t>(segment_id) << 48, true);
-    auto page = file_mapper.get_page(0, true);
+    auto page = file_mapper.get_page(0, false);
     // [0-8[   : Schema string length in #bytes
     const auto fsi_bitmap_size = *reinterpret_cast<uint64_t *>(page->get_data());
     // Each element in the bitmap is 8 bytes, hence we save the number of bytes that were previously saved in the bitmap, and we fill the bitmap again.

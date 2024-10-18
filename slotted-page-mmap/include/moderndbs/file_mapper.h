@@ -72,6 +72,8 @@ class Page {
    [[nodiscard]] size_t get_id() const { return *id; }
    [[nodiscard]] size_t get_count() const { return *count; }
    [[nodiscard]] bool is_exclusive() const { return *exclusive; }
+   [[nodiscard]] int get_readers_count() const { return *readers_count; }
+   [[nodiscard]] int get_state() const { return *state; }
 
    // Get the raw data pointer
    [[nodiscard]] char* get_data() const { return data; }

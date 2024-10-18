@@ -61,7 +61,7 @@ std::optional<uint32_t> SPSegment::read(const TID tid, std::byte* record, const 
    // Hence, we just pass the result page_id to file_mapper
    auto page_id = tid.get_page_id(segment_id);
    // First, I need to find the slot that was previously allocated in allocate method. TID is used for that.
-   auto page = file_mapper.get_page(page_id, true);
+   auto page = file_mapper.get_page(page_id, false);
    // If the page is already there, it's sufficient to use reinterpret_cast<SlottedPage*>
    auto* slotted_page = reinterpret_cast<SlottedPage*>(page->get_data());
    auto& slot = slotted_page->get_slots()[tid.get_slot()];

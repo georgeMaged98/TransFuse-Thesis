@@ -81,11 +81,11 @@ std::shared_ptr<Page> FileMapper::get_page(const size_t page_number, const bool 
 
 void FileMapper::release_page(std::shared_ptr<Page> page) {
    // Create a Bernoulli distribution with an 80% chance of success
-   // std::bernoulli_distribution d(0.1);
-   // if (bool success = d(engine)) {
-   //    std::cout << " WAIT\n";
-   //    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-   // }
+   std::bernoulli_distribution d(0.1);
+   if (bool success = d(engine)) {
+      std::cout << " WAIT\n";
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+   }
    if(page->is_exclusive()) {
       page->custom_latch.unlock_exclusive();
    }else {
