@@ -180,6 +180,8 @@ class FileMapper {
 
       close(fd);
    }
+
+   void msync_file(uint64_t pageNo);
 };
 } // transfuse
 

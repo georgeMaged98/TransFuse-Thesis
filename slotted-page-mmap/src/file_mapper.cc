@@ -17,7 +17,6 @@
 namespace moderndbs {
 static thread_local std::mt19937_64 engine{std::random_device{}()}; // Use a random device as seed
 
-
 FileMapper::FileMapper(std::string filename, const size_t page_size)
    : filename_(std::move(filename)), page_size_(page_size), file_size_(0), mmap_ptr_(nullptr) {
    // lock mmaped file
@@ -61,9 +60,9 @@ std::shared_ptr<Page> FileMapper::get_page(const size_t page_number, const bool 
    page_ptr->set_exclusive(is_exclusive);
 
    if (is_exclusive) {
-       page_ptr->custom_latch.lock_exclusive();
+      page_ptr->custom_latch.lock_exclusive();
    } else {
-       page_ptr->custom_latch.lock_shared();
+      page_ptr->custom_latch.lock_shared();
    }
 
    page_ptr->set_readers_count(page_ptr->custom_latch.readers_count.load());
@@ -73,22 +72,19 @@ std::shared_ptr<Page> FileMapper::get_page(const size_t page_number, const bool 
       perror("madvise");
    }
 
-   // if (msync(mmap_ptr_ + pos, page_size_, MS_SYNC) == -1) {
-   //    perror("msync failed");
-   // }
    return page_ptr;
 }
 
 void FileMapper::release_page(std::shared_ptr<Page> page) {
-   // Create a Bernoulli distribution with an 80% chance of success
+   // Create a Bernoulli distribution with an 10% chance of success
    std::bernoulli_distribution d(0.1);
    if (bool success = d(engine)) {
       std::cout << " WAIT\n";
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
    }
-   if(page->is_exclusive()) {
+   if (page->is_exclusive()) {
       page->custom_latch.unlock_exclusive();
-   }else {
+   } else {
       page->custom_latch.unlock_shared();
    }
    page->set_readers_count(page->custom_latch.readers_count.load());
@@ -150,4 +146,12 @@ void FileMapper::write_to_file(const void* data, size_t size) const {
    }
    close(fd);
 }
+
+void FileMapper::msync_file(uint64_t page_number) {
+   const size_t pos = page_number * page_size_;
+   if (msync(mmap_ptr_ + pos, page_size_, MS_SYNC) == -1) {
+      perror("msync failed");
+   }
+}
+
 } // transfuse
