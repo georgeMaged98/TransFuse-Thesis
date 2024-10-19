@@ -6,6 +6,7 @@
 #include <cstring>
 #include <iostream>
 #include <random>
+#include <unordered_set>
 #include <sys/resource.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -133,6 +134,12 @@ std::condition_variable cv;
 std::mutex cv_m;
 bool is_server_ready = false;
 
+unordered_set<uint64_t> fsi_pages;
+unordered_set<uint64_t> schema_pages;
+unordered_set<uint64_t> sp_pages;
+
+// Global atomic flag to control the error listener thread
+std::atomic<bool> should_stop_error_listener{false};
 
 void listenForErrors() {
    int server_sock, client_sock;
@@ -196,7 +203,7 @@ void listenForErrors() {
       std::lock_guard<std::mutex> lk(cv_m);
       is_server_ready = true;
    }
-   cv.notify_all();  // Notify waiting threads
+   cv.notify_all(); // Notify waiting threads
 
 
    int count = 0;
@@ -224,7 +231,20 @@ void listenForErrors() {
          count++;
          std::cout << "Current Count " << count << "\n";
          buffer[bytes_read] = '\0'; // Null-terminate the string
-         std::cerr << "Error from libfuse: " << buffer << std::endl;
+         std::cerr << "Error from libfuse: " << buffer << "\n";
+
+         // Extracting segment and page_number
+         std::string error_message(buffer);
+         size_t hyphen_pos = error_message.find('-');
+         std::string before_hyphen = error_message.substr(0, hyphen_pos);
+         std::string after_hyphen = error_message.substr(hyphen_pos + 1);
+         if (before_hyphen == "/sp_segment.txt") {
+            sp_pages.insert(std::stoi(after_hyphen));
+         } else if (before_hyphen == "/fsi_segment.txt") {
+            fsi_pages.insert(std::stoi(after_hyphen));
+         } else {
+            schema_pages.insert(std::stoi(after_hyphen));
+         }
       }
 
       // Close the client socket after reading
@@ -314,15 +334,29 @@ int main() {
 
          for (size_t j = 0; j < 400; ++j) {
             if (scan_distr(engine)) {
-               moderndbs::OrderRecord order = {j, j * 2, j * 100, j % 5, (j % 2 == 0 ? 'G' : 'H')};
-               db.insert(table, order);
+               /// READ two full segments
+               auto start_page = page_distr(engine);
+               auto end_page = start_page + 2;
+               for (uint16_t pg = start_page; pg < end_page && pg < 20; ++pg) {
+                  for (uint16_t sl = 0; sl < 79; ++sl) {
+                     std::cout << " Page: " << pg << " SLOT: " << sl << " \n";
+                     moderndbs::TID tid{pg, sl};
+                     std::cout << " Reading Tuple with TID: " << tid.get_value() << " \n";
+                     db.read_tuple(table, tid);
+                  }
+               }
             } else {
-               auto page = page_distr(engine);
-               auto slot = slot_distr(engine);
-               std::cout << " Page: " << page << " SLOT: " << slot << " \n";
-               moderndbs::TID tid{page, slot};
-               std::cout << " Reading Tuple with TID: " << tid.get_value() << " \n";
-               db.read_tuple(table, tid);
+               if (reads_distr(engine)) {
+                  auto page = page_distr(engine);
+                  auto slot = slot_distr(engine);
+                  std::cout << " Page: " << page << " SLOT: " << slot << " \n";
+                  moderndbs::TID tid{page, slot};
+                  std::cout << " Reading Tuple with TID: " << tid.get_value() << " \n";
+                  db.read_tuple(table, tid);
+               } else {
+                  moderndbs::OrderRecord order = {j, j * 2, j * 100, j % 5, (j % 2 == 0 ? 'G' : 'H')};
+                  db.insert(table, order);
+               }
             }
          }
 
@@ -333,8 +367,6 @@ int main() {
          // }
       });
    }
-
-
 
    for (auto& t : threads)
       t.join();
@@ -353,3 +385,22 @@ int main() {
    // //    auto result = db.read_tuple(table, tid);
    // // }
 }
+
+// int main() {
+//
+//    std::thread errorListener(listenForErrors);
+//
+//    using moderndbs::File;
+//    for (const auto* segment_file : std::vector<const char*>{"/tmp/transfuse_mnt/test.txt"}) {
+//       auto file = File::open_file(segment_file, File::Mode::WRITE);
+//       file->resize(0);
+//    }
+//
+//    moderndbs::FileMapper schema_file_mapper("/tmp/transfuse_mnt/test.txt", (sysconf(_SC_PAGESIZE)));
+//    auto p = schema_file_mapper.get_page(8, true);
+//    schema_file_mapper.release_page(p);
+//    should_stop_error_listener = true;
+//    errorListener.join();
+//    std::cout << "Error listener is ready, now starting other threads...\n";
+//
+// }

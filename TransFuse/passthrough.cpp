@@ -423,7 +423,7 @@ void notifyDatabase(const char* filePath, const uint64_t pageNo) {
     // send(sock, msg, strlen(msg), 0);
     //
     // close(sock);
-    std::string message = std::string(filePath) + std::to_string(pageNo);
+    std::string message = std::string(filePath) + "-" + std::to_string(pageNo);
     int client_sock;
     struct sockaddr_un addr;
 
@@ -445,9 +445,7 @@ void notifyDatabase(const char* filePath, const uint64_t pageNo) {
         close(client_sock);
         return;
     }
-
     std::cout << "Connected to server.\n";
-
 
     // Send error message
     ssize_t bytes_sent = send(client_sock, message.c_str(), strlen(message.c_str()), 0);
@@ -473,9 +471,7 @@ static int transfuse_write(const char *path, const char *buf, const size_t size,
 
     // Log the constructed path for debugging
     // printf(" --> transfuse_write() and path is %s -> fpath: %s. Offset is: %ld and Size is: %lu\n", path, fpath, offset, size);
-
     printf(" --> transfuse_write() and path is %s. Offset: %ld and Size: %lu\n", path, offset, size);
-
 
     // Open the file if the file info is NULL
     if (fi == nullptr || fi->fh == 0) {
@@ -492,37 +488,33 @@ static int transfuse_write(const char *path, const char *buf, const size_t size,
     size_t remaining_size = size;
     const size_t page_size = sysconf(_SC_PAGE_SIZE);
     const char *write_buf = buf;
-    off_t current_offset = offset;
+    /// This buffer_offset is to check pages when the buffer is BIG (HUGE PAGE)
+    /// Although, we explicitly use madvise(NOHUGEPAGE), we still get buffer with big size.
+    /// So we split them into page_size (4096-byte) chuncks and the buffer_offset is for that.
+    off_t buffer_offset = 0;
 
     while (remaining_size > 0) {
         size_t write_size = (remaining_size > page_size) ? page_size : remaining_size;
-
-        // while (current_offset + sizeof(int) <= write_size) {
-        //     // Cast the current position of the buffer as an integer and dereference it
-        //     int value = *reinterpret_cast<const int *>(write_buf + current_offset);
-        //
-        //     // Print the integer value
-        //     std::cout << " int " << value << "   ";
-        //
-        //     // Move to the next integer (increase offset by the size of an int)
-        //     current_offset += sizeof(int);
-        // }
-        int readers_count_ref = *reinterpret_cast<const int *>(write_buf + current_offset);
-        int state = *reinterpret_cast<const int*>(write_buf + current_offset + sizeof(int));
+        /// Page offset is the one in function parameters that we received the call with. The buffer_offset is for the
+        /// current buffer to be written. Their addition gives us the actual offset of the page in the file.
+        off_t page_offset_in_file = offset + buffer_offset;
+        int readers_count_ref = *reinterpret_cast<const int *>(write_buf + buffer_offset);
+        int state = *reinterpret_cast<const int*>(write_buf + buffer_offset + sizeof(int));
         printf("First int: %d, Second int: %d\n", readers_count_ref, state);
 
         if (state == 2) {
-            notifyDatabase(path, current_offset);
+
+            notifyDatabase(path, page_offset_in_file);
             res = -EINVAL;
-            printf(" --> FAILED TO WRITE %zu bytes to %s at offset %ld\n", write_size, fpath, current_offset);
+            printf(" --> FAILED TO WRITE %zu bytes to %s at offset %ld in file.\n", write_size, fpath, page_offset_in_file);
             remaining_size -= write_size;
             write_buf += write_size;
-            current_offset += write_size;
+            buffer_offset += write_size;
             continue;
         }
-        // Perform the write operation in chunks of 4KB or less
-        res = pwrite(fd, write_buf, write_size, current_offset);
-        printf(" --> ACTUALLY Wrote %zu bytes to %s at offset %ld\n", write_size, fpath, current_offset);
+        // If valid write, perform the write operation in chunks of 4KB or less
+        res = pwrite(fd, write_buf, write_size, page_offset_in_file);
+        printf(" --> ACTUALLY Wrote %zu bytes to %s at offset %ld in file.\n", write_size, fpath, page_offset_in_file);
 
         if (res == -1) {
             perror("Error writing to file");
@@ -533,17 +525,8 @@ static int transfuse_write(const char *path, const char *buf, const size_t size,
         // Update the remaining size, buffer pointer, and offset
         remaining_size -= write_size;
         write_buf += write_size;
-        current_offset += write_size;
-
-        // Log the size of the current write operation
+        buffer_offset += write_size;
     }
-
-    // Perform the write operation
-    // res = pwrite(fd, buf, size, offset);
-    // if (res == -1) {
-    //     perror("Error writing to file");
-    //     res = -errno;
-    // }
 
     // Close the file if it was opened in this function
     if (fi == nullptr || fi->fh == 0) {
