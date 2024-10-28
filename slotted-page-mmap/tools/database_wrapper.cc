@@ -138,8 +138,11 @@ unordered_set<uint64_t> fsi_pages;
 unordered_set<uint64_t> schema_pages;
 unordered_set<uint64_t> sp_pages;
 
-// Global atomic flag to control the error listener thread
-std::atomic<bool> should_stop_error_listener{false};
+/// Shutdown Requested for listeningForErrors function.
+std::atomic<bool> shutdown_requested(false);
+std::atomic<int> threads_remaining(0);
+std::mutex m_shutdown;
+
 
 void listenForErrors() {
    int server_sock, client_sock;
@@ -159,7 +162,7 @@ void listenForErrors() {
    // Create the socket
    server_sock = socket(AF_UNIX, SOCK_STREAM, 0);
    if (server_sock < 0) {
-      std::cerr << "Failed to create socket: " << strerror(errno) << std::endl;
+      std::cerr << "Failed to create socket: " << strerror(errno) << "\n";
       return;
    }
 
@@ -169,7 +172,7 @@ void listenForErrors() {
 
    // Bind the socket
    if (bind(server_sock, (struct sockaddr*) &addr, sizeof(addr)) < 0) {
-      std::cerr << "Failed to bind socket: " << strerror(errno) << std::endl;
+      std::cerr << "Failed to bind socket: " << strerror(errno) << "\n";
       close(server_sock);
       return;
    }
@@ -178,7 +181,7 @@ void listenForErrors() {
 
    // Start listening for incoming connections
    if (listen(server_sock, 5) < 0) {
-      std::cerr << "Failed to listen on socket: " << strerror(errno) << std::endl;
+      std::cerr << "Failed to listen on socket: " << strerror(errno) << "\n";
       close(server_sock);
       return;
    }
@@ -186,17 +189,17 @@ void listenForErrors() {
    // Set the server socket to non-blocking
    int flags = fcntl(server_sock, F_GETFL, 0);
    if (flags == -1) {
-      std::cerr << "Failed to get socket flags: " << strerror(errno) << std::endl;
+      std::cerr << "Failed to get socket flags: " << strerror(errno) << "\n";
       close(server_sock);
       return;
    }
    if (fcntl(server_sock, F_SETFL, flags | O_NONBLOCK) == -1) {
-      std::cerr << "Failed to set socket to non-blocking: " << strerror(errno) << std::endl;
+      std::cerr << "Failed to set socket to non-blocking: " << strerror(errno) << "\n";
       close(server_sock);
       return;
    }
 
-   std::cout << "Listening for errors... (Press Ctrl+C to stop)" << std::endl;
+   std::cout << "Listening for errors... (Press Ctrl+C to stop)\n";
 
    // Notify that the server is ready to accept connections
    {
@@ -207,16 +210,17 @@ void listenForErrors() {
 
 
    int count = 0;
-   while (true) { // Keep listening indefinitely
+   while (!shutdown_requested.load()) { // Keep listening indefinitely
       // Accept a connection from a client
       client_sock = accept(server_sock, nullptr, nullptr);
       if (client_sock < 0) {
          // Check if the error is due to no pending connections
          if (errno == EAGAIN || errno == EWOULDBLOCK) {
             // No connections available, continue to the next iteration
+            // std::this_thread::sleep_for(std::chrono::milliseconds(100));
             continue;
          }
-         std::cerr << "Failed to accept connection: " << strerror(errno) << std::endl;
+         std::cerr << "Failed to accept connection: " << strerror(errno) << "\n";
          continue; // Skip to the next iteration if an error occurs
       }
       std::cout << "Connection accepted.\n";
@@ -224,9 +228,9 @@ void listenForErrors() {
       // Read error message from the client
       ssize_t bytes_read = read(client_sock, buffer, sizeof(buffer) - 1);
       if (bytes_read < 0) {
-         std::cerr << "Failed to read error message: " << strerror(errno) << std::endl;
+         std::cerr << "Failed to read error message: " << strerror(errno) << "\n";
       } else if (bytes_read == 0) {
-         std::cerr << "Client disconnected unexpectedly." << std::endl;
+         std::cerr << "Client disconnected unexpectedly.\n";
       } else {
          count++;
          std::cout << "Current Count " << count << "\n";
@@ -250,64 +254,18 @@ void listenForErrors() {
       // Close the client socket after reading
       close(client_sock);
    }
+   // Wait for all threads to finish
+   std::unique_lock<std::mutex> lk(m_shutdown);
+   std::cout << "All worker threads have finished. Shutting down error listener...\n";
 
-   // Cleanup (unreachable in this infinite loop)
+   // Cleanup: close the server socket
    close(server_sock);
+
+   // Optionally, remove the socket file
+   if (unlink(socket_path) == -1) {
+      std::cerr << "Failed to remove socket file: " << strerror(errno) << "\n";
+   }
 }
-
-
-int main() {
-   // std::cout << "Setting memory limit..." << std::endl;
-   //
-   // struct rlimit limit;
-   // limit.rlim_cur = 512 * 1024 * 1024; // Set current limit to 256 MB
-   // limit.rlim_max = 512 * 1024 * 1024; // Set maximum limit to 256 MB
-   //
-   // if (setrlimit(RLIMIT_AS, &limit) == -1) {
-   //    std::cerr << "Failed to set memory limit: " << strerror(errno) << std::endl;
-   //    return 1; // Return a non-zero value to indicate failure
-   // }
-   //
-   // std::cout << "Memory limit set successfully." << std::endl;
-   //
-   // struct rlimit new_limit;
-   // if (getrlimit(RLIMIT_AS, &new_limit) == 0) {
-   //    std::cout << "Current limit: " << new_limit.rlim_cur << " MB\n";
-   // } else {
-   //    std::cerr << "Failed to get memory limit: " << strerror(errno) << std::endl;
-   // }
-
-
-   // Create the errorListener thread before joining the other threads
-   std::thread errorListener(listenForErrors);
-
-   {
-      std::unique_lock<std::mutex> lk(cv_m);
-      cv.wait(lk, [] { return is_server_ready; });
-   }
-
-
-   using moderndbs::File;
-   for (const auto* segment_file : std::vector<const char*>{"/tmp/transfuse_mnt/fsi_segment.txt", "/tmp/transfuse_mnt/sp_segment.txt", "/tmp/transfuse_mnt/schema_segment.txt"}) {
-      auto file = File::open_file(segment_file, File::Mode::WRITE);
-      file->resize(0);
-   }
-
-   auto db = moderndbs::Database();
-   {
-      moderndbs::FileMapper schema_file_mapper("/tmp/transfuse_mnt/schema_segment.txt", (sysconf(_SC_PAGESIZE)));
-      moderndbs::SchemaSegment schema_segment(49, schema_file_mapper);
-      schema_segment.set_schema(moderndbs::getTPCHOrderSchema());
-      schema_segment.write();
-   }
-   db.load_schema(49);
-   auto& table = db.get_schema().tables[0];
-
-   /// INSERTIONS -> INSERT OrderRecords for 20 pages.
-   for (uint64_t i = 0; i < 1600; ++i) {
-      moderndbs::OrderRecord order = {i, i * 2, i * 100, i % 5, (i % 2 == 0 ? 'G' : 'H')};
-      db.insert(table, order);
-   }
 
 //
 // int main() {
