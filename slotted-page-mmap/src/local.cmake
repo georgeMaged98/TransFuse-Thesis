@@ -27,6 +27,8 @@ set(
     src/sp_segment.cc
     src/file_mapper.cc
     src/custom_read_writer_lock.cc
+    src/wal_segment.cc
+    src/transaction_manager.cc
 )
 if(UNIX)
     set(SRC_CC ${SRC_CC} src/file/posix_file.cc)

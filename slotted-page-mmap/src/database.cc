@@ -2,27 +2,30 @@
 
 #include <cstring>
 
-moderndbs::TID moderndbs::Database::insert(const schema::Table& table, OrderRecord& order) {
+moderndbs::TID moderndbs::Database::insert(const schema::Table& table, OrderRecord& order, uint64_t transactionId) {
+   const uint64_t lsn = wal_segment->appendRecord(transactionId, TransactionState::RUNNING, nullptr, &order);
    SPSegment& sp = *slotted_pages.at(table.sp_segment);
    auto* data = reinterpret_cast<std::byte*>(&order);
    auto order_size = sizeof(OrderRecord);
    auto tid = sp.allocate(order_size);
    // Write the data to the segment
-   sp.write(tid, data, order_size);
+   sp.write(tid, data, order_size, lsn);
    std::cout << "Tuple with TID " << tid.get_value() << " Page " << tid.get_page_id(0) << "  SLOT  " << tid.get_slot() << " inserted!\n";
    return tid;
 }
 
-void moderndbs::Database::update_tuple(const schema::Table& table, const TID tid, OrderRecord& order) {
+void moderndbs::Database::update_tuple(const schema::Table& table, const TID tid, OrderRecord& order, uint64_t transactionId) {
+   auto rec = read_tuple(table, tid, transactionId);
+   const uint64_t lsn = wal_segment->appendRecord(transactionId, TransactionState::RUNNING, &rec.value(), &order);
    SPSegment& sp = *slotted_pages.at(table.sp_segment);
    auto* data = reinterpret_cast<std::byte*>(&order);
    auto order_size = sizeof(OrderRecord);
    // Write the data to the segment
-   sp.write(tid, data, order_size, true);
+   sp.write(tid, data, order_size, true, lsn);
    std::cout << "Tuple with TID " << tid.get_value() << " updated!\n";
 }
 
-void moderndbs::Database::load_new_schema(std::unique_ptr<moderndbs::schema::Schema> schema) {
+void moderndbs::Database::load_new_schema(std::unique_ptr<schema::Schema> schema) {
    if (schema_segment) {
       schema_segment->write();
    }
@@ -39,7 +42,7 @@ moderndbs::schema::Schema& moderndbs::Database::get_schema() {
    return *schema_segment->get_schema();
 }
 
-std::optional<moderndbs::OrderRecord> moderndbs::Database::read_tuple(const schema::Table& table, const TID tid) {
+std::optional<moderndbs::OrderRecord> moderndbs::Database::read_tuple(const schema::Table& table, const TID tid, uint64_t transactionId) {
    auto& sps = *slotted_pages.at(table.sp_segment);
    // Prepare buffer for reading the data
    auto read_buffer = std::vector<std::byte>(sizeof(OrderRecord));
@@ -57,9 +60,11 @@ std::optional<moderndbs::OrderRecord> moderndbs::Database::read_tuple(const sche
    return record;
 }
 
-void moderndbs::Database::delete_tuple(const schema::Table& table, const TID tid) {
+void moderndbs::Database::delete_tuple(const schema::Table& table, const TID tid, uint64_t transactionId) {
+   auto rec = read_tuple(table, tid, transactionId);
+   const uint64_t lsn = wal_segment->appendRecord(transactionId, TransactionState::RUNNING, &rec.value(), nullptr);
    SPSegment& sp = *slotted_pages.at(table.sp_segment);
-   sp.erase(tid);
+   sp.erase(tid, lsn);
    std::cout << "Tuple with TID " << tid.get_value() << " deleted!\n";
 }
 

@@ -3,6 +3,7 @@
 //
 
 #include "moderndbs/file_mapper.h"
+#include "moderndbs/segment.h"
 #include <filesystem>
 #include <iostream>
 #include <random>
@@ -56,7 +57,6 @@ std::shared_ptr<Page> FileMapper::get_page(const size_t page_number, const bool 
 
    auto page_ptr = std::make_shared<Page>(mapped_data, page_size_);
    page_ptr->set_id(page_number);
-   page_ptr->set_count(0);
    page_ptr->set_exclusive(is_exclusive);
 
    if (is_exclusive) {
@@ -80,7 +80,7 @@ void FileMapper::release_page(std::shared_ptr<Page> page) {
    std::bernoulli_distribution d(0.1);
    if (bool success = d(engine)) {
       std::cout << " WAIT\n";
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      std::this_thread::sleep_for(std::chrono::milliseconds(200));
    }
    if (page->is_exclusive()) {
       page->custom_latch.unlock_exclusive();
@@ -120,7 +120,7 @@ uint64_t FileMapper::calculate_file_size(const uint64_t oldFileSize) const {
       sz = maxMapSize;
    }
 
-   return static_cast<int>(sz);
+   return static_cast<uint64_t>(sz);
 }
 
 void FileMapper::write_to_file(const void* data, size_t size) const {
@@ -147,11 +147,53 @@ void FileMapper::write_to_file(const void* data, size_t size) const {
    close(fd);
 }
 
-void FileMapper::msync_file(uint64_t page_number) {
-   const size_t pos = page_number * page_size_;
-   if (msync(mmap_ptr_ + pos, page_size_, MS_SYNC) == -1) {
-      perror("msync failed");
+void FileMapper::msync_file(const uint64_t page_offset) const {
+   char* mapped_data = static_cast<char*>(mmap_ptr_) + page_offset;
+   int readers_count_ref = *reinterpret_cast<const int*>(mapped_data);
+   int state = *reinterpret_cast<const int*>(mapped_data + sizeof(int));
+   printf(" PAGE OFFSET %lu  First int: %d, Second int: %d\n", page_offset, readers_count_ref, state);
+   if ((reinterpret_cast<uintptr_t>(mmap_ptr_ + page_offset) % sysconf(_SC_PAGESIZE)) != 0) {
+      printf("Address is not page-aligned.\n");
    }
+   int res;
+   int retry_count = 0;
+   int MAX_RETRIES = 3;
+   while (retry_count < MAX_RETRIES && ((res = msync(mmap_ptr_ + page_offset, page_size_, MS_SYNC) == -1))) {
+      printf("Retrying write attempt %d\n", retry_count + 1);
+      retry_count++;
+   }
+
+   if (res == -1) {
+      perror("Error writing to file after retries");
+   }
+   // if (msync(mmap_ptr_ + page_offset, page_size_, MS_SYNC) == -1) {
+   //    printf("msync error: %d, %s\n", errno, strerror(errno));
+   // }
 }
+
+void FileMapper::append_to_wal_file(const char* data, size_t data_size) {
+   std::shared_ptr<Page> page = get_page(0, true);
+   const auto& latest_flushed_LSN = *reinterpret_cast<uint64_t*>(page->get_data());
+   printf(" BEFORE APPENDING: LATEST FLUSHED LSN: %lu \n", latest_flushed_LSN);
+   /// sizeof(uint64_t) -> LSN COUNT
+   size_t offset = headerSize + lockDataSize + sizeof(uint64_t) + latest_flushed_LSN * sizeof(LogRecord);
+   /// TODO: File Resizing
+   uint64_t new_file_size = offset + data_size;
+   if (new_file_size > file_size_) {
+      map_file(file_size_ + data_size);
+   }
+   char* data_start = static_cast<char*>(mmap_ptr_) + offset;
+   uint64_t num_records = data_size / sizeof(LogRecord);
+   uint64_t new_lsn_count = latest_flushed_LSN + num_records;
+   *reinterpret_cast<uint64_t*>(page->get_data()) = new_lsn_count;
+   printf(" LATEST FLUSHED LSN: %lu \n", new_lsn_count);
+   memcpy(data_start, data, data_size);
+   release_page(page);
+   // TODO: msync
+   // Write it now to disk
+   if (msync(mmap_ptr_, new_file_size, MS_SYNC) == -1) {
+      perror("Could not sync the file to disk");
+   }
+};
 
 } // transfuse

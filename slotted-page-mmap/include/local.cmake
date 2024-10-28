@@ -16,4 +16,5 @@ set(
     include/moderndbs/slotted_page.h
     include/moderndbs/file_mapper.h
     include/moderndbs/custom_read_writer_lock.h
+    include/moderndbs/transaction_manager.h
 )

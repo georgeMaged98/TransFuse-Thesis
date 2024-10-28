@@ -38,12 +38,12 @@ class Page {
       state = reinterpret_cast<int*>(mapped_data + offset);
       offset += sizeof(int);
 
-      // id, count, exclusive fields mapped from file
+      // id, lsn, exclusive fields mapped from file
       id = reinterpret_cast<size_t*>(mapped_data + offset);
       offset += sizeof(size_t);
 
-      // Map the count field
-      count = reinterpret_cast<size_t*>(mapped_data + offset);
+      // Map the lsn field
+      lsn = reinterpret_cast<size_t*>(mapped_data + offset);
       offset += sizeof(size_t);
 
       // Map the exclusive field
@@ -63,14 +63,14 @@ class Page {
 
    // Mutators
    void set_id(const size_t new_id) const { *id = new_id; }
-   void set_count(const size_t new_count) const { *count = new_count; }
+   void set_lsn(const size_t new_lsn) const { *lsn = new_lsn; }
    void set_exclusive(bool is_exclusive) const { *exclusive = is_exclusive; }
    void set_readers_count(const int new_readers_count) const { *readers_count = new_readers_count; }
    void set_state(const int new_state) const { *state = new_state; }
 
    /// Returns a pointer to this page's data.
    [[nodiscard]] size_t get_id() const { return *id; }
-   [[nodiscard]] size_t get_count() const { return *count; }
+   [[nodiscard]] size_t get_lsn() const { return *lsn; }
    [[nodiscard]] bool is_exclusive() const { return *exclusive; }
    [[nodiscard]] int get_readers_count() const { return *readers_count; }
    [[nodiscard]] int get_state() const { return *state; }
@@ -88,7 +88,7 @@ class Page {
    int* readers_count = nullptr;
    int* state = nullptr;
    size_t* id = nullptr;
-   size_t* count = nullptr;
+   size_t* lsn = nullptr;
    bool* exclusive = nullptr;
    char* data = nullptr;
    size_t data_size = 0;
@@ -114,9 +114,13 @@ class FileMapper {
 
    [[nodiscard]] size_t get_page_size() const { return page_size_; }
 
-   [[nodiscard]] size_t get_data_size() const { return page_size_ - headerSize - lockDataSize; } // id, count, exclusive, readers_count, state
+   [[nodiscard]] size_t get_data_size() const { return page_size_ - headerSize - lockDataSize; } // id, lsn, exclusive, readers_count, state
 
    void write_to_file(const void* data, size_t size) const;
+
+   void append_to_wal_file(const char *data, size_t size);
+
+   void msync_file(const uint64_t pageNo) const;
 
    private:
    std::string filename_;
@@ -130,7 +134,7 @@ class FileMapper {
    [[nodiscard]] uint64_t calculate_file_size(uint64_t oldFileSize) const;
 
    void map_file(const uint64_t minSize) {
-      const int fd = open(filename_.c_str(), O_RDWR | O_CREAT,
+      const int fd = open(filename_.c_str(), O_RDWR | O_CREAT | O_APPEND,
                           static_cast<mode_t>(0664));
 
       if (fd == -1) {
@@ -181,7 +185,6 @@ class FileMapper {
       close(fd);
    }
 
-   void msync_file(uint64_t pageNo);
 };
 } // transfuse
 

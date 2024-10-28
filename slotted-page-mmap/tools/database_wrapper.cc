@@ -309,82 +309,147 @@ int main() {
       db.insert(table, order);
    }
 
-   // Pre-allocate the tids vector to the correct size
-   std::vector<moderndbs::TID> tids;
-   uint32_t insertions_per_thread = 100;
-   tids.reserve(4 * insertions_per_thread); // 4 threads
-
-   std::vector<std::thread> threads;
-   std::vector<std::vector<moderndbs::TID>> tids_per_thread(4);
-
-   for (size_t thread = 0; thread < 10; ++thread) {
-      threads.emplace_back([thread, &table, &db, &tids_per_thread, insertions_per_thread] {
-         std::mt19937_64 engine{thread};
-         // 5% of queries are scans.
-         std::bernoulli_distribution scan_distr{0.05};
-         // Number of pages accessed by a point query is geometrically distributed.
-         std::geometric_distribution<size_t> num_pages_distr{0.5};
-         // 60% of point queries are reads.
-         std::bernoulli_distribution reads_distr{0.6};
-
-         // Pages and Slots
-         // Out of 20 accesses, 10 are from page 0, 4 from page 1, 2 from page 2, 1 from page 3, and 3 from page 4.
-         std::uniform_int_distribution<uint16_t> page_distr{0, 19};
-         std::uniform_int_distribution<uint16_t> slot_distr{0, 79};
-
-         for (size_t j = 0; j < 400; ++j) {
-            if (scan_distr(engine)) {
-               /// READ two full segments
-               auto start_page = page_distr(engine);
-               auto end_page = start_page + 2;
-               for (uint16_t pg = start_page; pg < end_page && pg < 20; ++pg) {
-                  for (uint16_t sl = 0; sl < 79; ++sl) {
-                     std::cout << " Page: " << pg << " SLOT: " << sl << " \n";
-                     moderndbs::TID tid{pg, sl};
-                     std::cout << " Reading Tuple with TID: " << tid.get_value() << " \n";
-                     db.read_tuple(table, tid);
-                  }
-               }
-            } else {
-               if (reads_distr(engine)) {
-                  auto page = page_distr(engine);
-                  auto slot = slot_distr(engine);
-                  std::cout << " Page: " << page << " SLOT: " << slot << " \n";
-                  moderndbs::TID tid{page, slot};
-                  std::cout << " Reading Tuple with TID: " << tid.get_value() << " \n";
-                  db.read_tuple(table, tid);
-               } else {
-                  moderndbs::OrderRecord order = {j, j * 2, j * 100, j % 5, (j % 2 == 0 ? 'G' : 'H')};
-                  db.insert(table, order);
-               }
-            }
-         }
-
-         // for (uint64_t i = 0; i < insertions_per_thread; ++i) {
-         //    moderndbs::OrderRecord order = {i, i * 2, i * 100, i % 5, (i % 2 == 0 ? 'G' : 'H')};
-         //    auto tid = db.insert(table, order);
-         //    tids_per_thread[thread].push_back(tid);
-         // }
-      });
-   }
-
-   for (auto& t : threads)
-      t.join();
-
-   errorListener.join();
-   std::cout << "Error listener is ready, now starting other threads...\n";
-
-
-   // // for (int i = 0; i < 1000; ++i) {
-   // //    uint64_t random_page = page(engine);
-   // //    uint64_t random_slot = slot(engine);
-   // //    auto tid = moderndbs::TID(random_page, random_slot);
-   // //    // Alternatively, you could print them directly:
-   // //    // std::cout << "RAND: " << random_value << " " << random_value2  << " \n";
-   // //    // std::cout << "TID: " << tid.get_page_id(table.sp_segment) << " Slot: " <<tid.get_slot() << std::endl;
-   // //    auto result = db.read_tuple(table, tid);
-   // // }
-}
+//
+// int main() {
+//    // std::cout << "Setting memory limit..." << std::endl;
+//    //
+//    // struct rlimit limit;
+//    // limit.rlim_cur = 512 * 1024 * 1024; // Set current limit to 256 MB
+//    // limit.rlim_max = 512 * 1024 * 1024; // Set maximum limit to 256 MB
+//    //
+//    // if (setrlimit(RLIMIT_AS, &limit) == -1) {
+//    //    std::cerr << "Failed to set memory limit: " << strerror(errno) << std::endl;
+//    //    return 1; // Return a non-zero value to indicate failure
+//    // }
+//    //
+//    // std::cout << "Memory limit set successfully." << std::endl;
+//    //
+//    // struct rlimit new_limit;
+//    // if (getrlimit(RLIMIT_AS, &new_limit) == 0) {
+//    //    std::cout << "Current limit: " << new_limit.rlim_cur << " MB\n";
+//    // } else {
+//    //    std::cerr << "Failed to get memory limit: " << strerror(errno) << std::endl;
+//    // }
+//
+//
+//    // Create the errorListener thread before joining the other threads
+//    std::thread errorListener(listenForErrors);
+//
+//    {
+//       std::unique_lock<std::mutex> lk(cv_m);
+//       cv.wait(lk, [] { return is_server_ready; });
+//    }
+//    std::cout << "Error listener is ready, now starting worker threads...\n";
+//
+//    using moderndbs::File;
+//    for (const auto* segment_file : std::vector<const char*>{"/tmp/transfuse_mnt/fsi_segment.txt", "/tmp/transfuse_mnt/sp_segment.txt", "/tmp/transfuse_mnt/schema_segment.txt"}) {
+//       auto file = File::open_file(segment_file, File::Mode::WRITE);
+//       file->resize(0);
+//    }
+//
+//    auto db = moderndbs::Database();
+//    {
+//       moderndbs::FileMapper schema_file_mapper("/tmp/transfuse_mnt/schema_segment.txt", (sysconf(_SC_PAGESIZE)));
+//       moderndbs::SchemaSegment schema_segment(49, schema_file_mapper);
+//       schema_segment.set_schema(moderndbs::getTPCHOrderSchema());
+//       schema_segment.write();
+//    }
+//    db.load_schema(49);
+//    auto& table = db.get_schema().tables[0];
+//
+//    /// INSERTIONS -> INSERT OrderRecords for 20 pages.
+//    for (uint64_t i = 0; i < 1600; ++i) {
+//       moderndbs::OrderRecord order = {i, i * 2, i * 100, i % 5, (i % 2 == 0 ? 'G' : 'H')};
+//       db.insert(table, order);
+//    }
+//
+//    constexpr int num_threads = 4;
+//    threads_remaining.store(num_threads);
+//    std::vector<std::thread> workers;
+//
+//    for (size_t thread = 0; thread < num_threads; ++thread) {
+//       workers.emplace_back([thread, &table, &db] {
+//          std::mt19937_64 engine{thread};
+//          // 5% of queries are scans.
+//          std::bernoulli_distribution scan_distr{0.05};
+//          // Number of pages accessed by a point query is geometrically distributed.
+//          std::geometric_distribution<size_t> num_pages_distr{0.5};
+//          // 60% of point queries are reads.
+//          std::bernoulli_distribution reads_distr{0.6};
+//
+//          // Pages and Slots
+//          // Out of 20 accesses, 10 are from page 0, 4 from page 1, 2 from page 2, 1 from page 3, and 3 from page 4.
+//          std::uniform_int_distribution<uint16_t> page_distr{0, 19};
+//          std::uniform_int_distribution<uint16_t> slot_distr{0, 79};
+//
+//          for (size_t j = 0; j < 100; ++j) {
+//             if (scan_distr(engine)) {
+//                /// READ two full segments
+//                auto start_page = page_distr(engine);
+//                auto end_page = start_page + 2;
+//                for (uint16_t pg = start_page; pg < end_page && pg < 20; ++pg) {
+//                   for (uint16_t sl = 0; sl < 79; ++sl) {
+//                      std::cout << " Page: " << pg << " SLOT: " << sl << " \n";
+//                      moderndbs::TID tid{pg, sl};
+//                      std::cout << " Reading Tuple with TID: " << tid.get_value() << " \n";
+//                      db.read_tuple(table, tid);
+//                   }
+//                }
+//             } else {
+//                if (reads_distr(engine)) {
+//                   auto page = page_distr(engine);
+//                   auto slot = slot_distr(engine);
+//                   std::cout << " Page: " << page << " SLOT: " << slot << " \n";
+//                   moderndbs::TID tid{page, slot};
+//                   std::cout << " Reading Tuple with TID: " << tid.get_value() << " \n";
+//                   db.read_tuple(table, tid);
+//                } else {
+//                   moderndbs::OrderRecord order = {j, j * 2, j * 100, j % 5, (j % 2 == 0 ? 'G' : 'H')};
+//                   db.insert(table, order);
+//                }
+//             }
+//          }
+//
+//          if (--threads_remaining == 0) {
+//             std::lock_guard<std::mutex> lk(m_shutdown);
+//             /// WAIT FOR ANY new Messages yet to arrive from libfuse.
+//             std::this_thread::sleep_for(std::chrono::milliseconds(500));
+//             shutdown_requested.store(true);
+//          }
+//       });
+//    }
+//
+//    for (auto& t : workers) {
+//       t.join();
+//    }
+//
+//    std::cout << "FINITO\n";
+//    errorListener.join();
+//    std::cout << "Error listener terminated. Exiting...\n";
+//
+//    for (auto pp: sp_pages) {
+//       db.sp_file_mapper.msync_file(pp);
+//    }
+//
+//    for (auto pp: fsi_pages) {
+//       db.fsi_file_mapper.msync_file(pp);
+//    }
+//
+//    for (auto pp: schema_pages) {
+//       db.schema_file_mapper.msync_file(pp);
+//    }
+//
+//    return 0;
+//    // // for (int i = 0; i < 1000; ++i) {
+//    // //    uint64_t random_page = page(engine);
+//    // //    uint64_t random_slot = slot(engine);
+//    // //    auto tid = moderndbs::TID(random_page, random_slot);
+//    // //    // Alternatively, you could print them directly:
+//    // //    // std::cout << "RAND: " << random_value << " " << random_value2  << " \n";
+//    // //    // std::cout << "TID: " << tid.get_page_id(table.sp_segment) << " Slot: " <<tid.get_slot() << std::endl;
+//    // //    auto result = db.read_tuple(table, tid);
+//    // // }
+// }
 
 // int main() {
 //
@@ -404,3 +469,27 @@ int main() {
 //    std::cout << "Error listener is ready, now starting other threads...\n";
 //
 // }
+
+
+int main() {
+   auto db = moderndbs::Database();
+   {
+      moderndbs::FileMapper schema_file_mapper("/tmp/transfuse_mnt/schema_segment.txt", (sysconf(_SC_PAGESIZE)));
+      moderndbs::SchemaSegment schema_segment(49, schema_file_mapper);
+      schema_segment.set_schema(moderndbs::getTPCHOrderSchema());
+      schema_segment.write();
+   }
+   db.load_schema(49);
+   auto& table = db.get_schema().tables[0];
+   auto transactionID = db.transaction_manager.startTransaction();
+   moderndbs::OrderRecord order = {10,20,30,40,'D'};
+   db.insert(table, order, transactionID);
+   db.insert(table, order, transactionID);
+   db.insert(table, order, transactionID);
+   db.transaction_manager.commitTransaction(transactionID);
+
+   transactionID = db.transaction_manager.startTransaction();
+   order = {10,20,30,40,'D'};
+   db.insert(table, order, transactionID);
+   db.transaction_manager.commitTransaction(transactionID);
+}

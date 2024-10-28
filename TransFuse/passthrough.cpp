@@ -459,6 +459,39 @@ void notifyDatabase(const char* filePath, const uint64_t pageNo) {
     close(client_sock);
 }
 
+void get_latest_flushed_LSN() {
+    const char* path = "/wal_segment.txt";
+    char fpath[PATH_MAX];
+    // Construct the full path by combining the FUSE root directory with the relative path
+    snprintf(fpath, sizeof(fpath), "%s%s", fuse_root_dir, path);
+
+    // Open the file for reading
+    int fd = open(fpath, O_RDONLY);
+    if (fd == -1) {
+        perror("Error opening file");
+        return;
+    }
+
+    // Buffer to hold the 8 bytes
+    uint64_t latestFlushedLSN;
+    static constexpr uint32_t headerSize = 2 * sizeof(size_t) + 1;
+    static constexpr uint32_t lockDataSize = 2 * sizeof(int);
+    size_t offset = headerSize + lockDataSize;
+
+    // Read the first 8 bytes of the file
+    ssize_t res = pread(fd, &latestFlushedLSN, sizeof(uint64_t), offset);
+    if (res == -1) {
+        perror("Error reading file");
+        res = -errno;
+    }
+
+
+    // Print the LSN value
+    std::cout << "Latest Flushed LSN: " << latestFlushedLSN << std::endl;
+
+    // Close the file descriptor
+    close(fd);
+}
 
 static int transfuse_write(const char *path, const char *buf, const size_t size,
                            off_t offset, struct fuse_file_info *fi) {
@@ -502,6 +535,10 @@ static int transfuse_write(const char *path, const char *buf, const size_t size,
         int state = *reinterpret_cast<const int*>(write_buf + buffer_offset + sizeof(int));
         printf("First int: %d, Second int: %d\n", readers_count_ref, state);
 
+        size_t lsn_ref = *reinterpret_cast<const size_t *>(write_buf + buffer_offset + 2 * sizeof(int) + sizeof(size_t));
+
+        printf("LSN IN PAGE and path is %s : %lu\n", path, lsn_ref);
+        get_latest_flushed_LSN();
         if (state == 2) {
 
             notifyDatabase(path, page_offset_in_file);

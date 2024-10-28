@@ -83,7 +83,7 @@ std::optional<uint32_t> SPSegment::read(const TID tid, std::byte* record, const 
    return read_bytes;
 }
 
-uint32_t SPSegment::write(TID tid, std::byte* record, uint32_t record_size, bool is_update) {
+uint32_t SPSegment::write(TID tid, std::byte* record, uint32_t record_size, uint64_t lsn, bool is_update) {
    // TODO: add your implementation here
    // The tid.get_page_id() does the same functionality of the XOR that was used in the schema_segment and fsi_segment.
    // Hence, we just pass the result page_id to file_mapper
@@ -102,12 +102,15 @@ uint32_t SPSegment::write(TID tid, std::byte* record, uint32_t record_size, bool
       TID redirect_tid = slot.as_redirect_tid();
       // file_mapper.unfix_page(page, true);
       file_mapper.release_page(page);
-      return write(redirect_tid, record, record_size);
+      return write(redirect_tid, record, record_size, lsn);
    }
 
    uint32_t written_bytes = std::min(slot.get_size(), record_size);
    auto offset = slot.get_offset(); // The place at which we write the data.
    memcpy(slotted_page.get_data() + offset, record, written_bytes);
+
+   /// UPDATE LSN on page
+   page->set_lsn(lsn);
    // file_mapper.unfix_page(page, true);
    file_mapper.release_page(page);
    return written_bytes;
@@ -163,7 +166,7 @@ void SPSegment::resize(TID tid, uint32_t new_length) {
    }
 }
 
-bool SPSegment::erase(TID tid) {
+bool SPSegment::erase(TID tid, uint64_t lsn) {
    // TODO: add your implementation here
    fsi.fsi_mutex.lock();
    // tid.get_page_id() does the same functionality of the XOR that was used in the schema_segment and fsi_segment.
@@ -180,9 +183,11 @@ bool SPSegment::erase(TID tid) {
    }
    if (slot.is_redirect()) {
       file_mapper.release_page(page);
-      return erase(slot.as_redirect_tid());
+      return erase(slot.as_redirect_tid(), lsn);
    }
    slotted_page.erase(tid.get_slot());
+   /// UPDATE LSN on page
+   page->set_lsn(lsn);
    // file_mapper.unfix_page(page, true);
    file_mapper.release_page(page);
    fsi.update(tid.get_page_id(segment_id), slotted_page.get_free_space());
