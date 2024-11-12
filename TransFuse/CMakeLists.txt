@@ -16,7 +16,8 @@ include_directories(${FUSE_INCLUDE_DIRS})
 add_executable(transfuse_app transfuse.cpp
         passthrough.cpp
         passthrough_helpers.h
-        hello.cpp)
+        hello.cpp
+        utils.cc)
 
 # Link the FUSE library
 target_link_libraries(transfuse_app ${FUSE_LIBRARIES})

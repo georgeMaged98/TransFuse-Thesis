@@ -43,9 +43,11 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <cerrno>
-#include <iostream>
-#include <sys/socket.h>
 #include <sys/un.h>
+#include <atomic>
+#include "passthrough_helpers.h"
+#include "utils.cc"
+
 
 #ifdef __FreeBSD__
 #include <sys/socket.h>
@@ -56,9 +58,6 @@
 #include <sys/xattr.h>
 #endif
 
-#include <atomic>
-
-#include "passthrough_helpers.h"
 
 fuse_fill_dir_flags fill_dir_plus = FUSE_FILL_DIR_PLUS;
 
@@ -410,88 +409,8 @@ static int transfuse_read(const char *path, char *buf, const size_t size, const 
     return res;
 }
 
-void notifyDatabase(const char* filePath, const uint64_t pageNo) {
-    // int sock;
-    // struct sockaddr_un addr;
-    // const char* msg = "Invalid write detected";
-    //
-    // sock = socket(AF_UNIX, SOCK_STREAM, 0);
-    // addr.sun_family = AF_UNIX;
-    // strcpy(addr.sun_path, "/tmp/db_socket");
-    //
-    // connect(sock, (struct sockaddr*)&addr, sizeof(addr));
-    // send(sock, msg, strlen(msg), 0);
-    //
-    // close(sock);
-    std::string message = std::string(filePath) + "-" + std::to_string(pageNo);
-    int client_sock;
-    struct sockaddr_un addr;
-
-    // Create a socket
-    client_sock = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (client_sock < 0) {
-        std::cerr << "Failed to create socket: " << strerror(errno) << std::endl;
-        return;
-    }
-    std::cout << "Client socket created.\n";
-
-    // Setup socket address
-    addr.sun_family = AF_UNIX;
-    strcpy(addr.sun_path, "/tmp/db_socket");
-
-    // Connect to the server
-    if (connect(client_sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-        std::cerr << "Failed to connect to server: " << strerror(errno) << std::endl;
-        close(client_sock);
-        return;
-    }
-    std::cout << "Connected to server.\n";
-
-    // Send error message
-    ssize_t bytes_sent = send(client_sock, message.c_str(), strlen(message.c_str()), 0);
-    if (bytes_sent < 0) {
-        std::cerr << "Failed to send message: " << strerror(errno) << std::endl;
-    } else {
-        std::cout << "Message sent to server: " << message << std::endl;
-    }
-
-    // Clean up
-    close(client_sock);
-}
-
-void get_latest_flushed_LSN() {
-    const char* path = "/wal_segment.txt";
-    char fpath[PATH_MAX];
-    // Construct the full path by combining the FUSE root directory with the relative path
-    snprintf(fpath, sizeof(fpath), "%s%s", fuse_root_dir, path);
-
-    // Open the file for reading
-    int fd = open(fpath, O_RDONLY);
-    if (fd == -1) {
-        perror("Error opening file");
-        return;
-    }
-
-    // Buffer to hold the 8 bytes
-    uint64_t latestFlushedLSN;
-    static constexpr uint32_t headerSize = 2 * sizeof(size_t) + 1;
-    static constexpr uint32_t lockDataSize = 2 * sizeof(int);
-    size_t offset = headerSize + lockDataSize;
-
-    // Read the first 8 bytes of the file
-    ssize_t res = pread(fd, &latestFlushedLSN, sizeof(uint64_t), offset);
-    if (res == -1) {
-        perror("Error reading file");
-        res = -errno;
-    }
 
 
-    // Print the LSN value
-    std::cout << "Latest Flushed LSN: " << latestFlushedLSN << std::endl;
-
-    // Close the file descriptor
-    close(fd);
-}
 
 static int transfuse_write(const char *path, const char *buf, const size_t size,
                            off_t offset, struct fuse_file_info *fi) {
@@ -504,7 +423,7 @@ static int transfuse_write(const char *path, const char *buf, const size_t size,
 
     // Log the constructed path for debugging
     // printf(" --> transfuse_write() and path is %s -> fpath: %s. Offset is: %ld and Size is: %lu\n", path, fpath, offset, size);
-    printf(" --> transfuse_write() and path is %s. Offset: %ld and Size: %lu\n", path, offset, size);
+    printf(" --> transfuse_write() and path is %s Offset: %ld and Size: %lu\n", path, offset, size);
 
     // Open the file if the file info is NULL
     if (fi == nullptr || fi->fh == 0) {
@@ -527,23 +446,47 @@ static int transfuse_write(const char *path, const char *buf, const size_t size,
     off_t buffer_offset = 0;
 
     while (remaining_size > 0) {
-        size_t write_size = (remaining_size > page_size) ? page_size : remaining_size;
+
+        const char *current_buffer = write_buf + buffer_offset;
+
+        // int readers_count_ref = *reinterpret_cast<const int *>(write_buf + buffer_offset);
+        // int state = *reinterpret_cast<const int*>(write_buf + buffer_offset + sizeof(int));
+        // printf("First int: %d, Second int: %d\n", readers_count_ref, state);
+
+        // size_t lsn_ref = *reinterpret_cast<const size_t *>(write_buf + buffer_offset + 2 * sizeof(int) + sizeof(size_t));
+        //
+        // printf("LSN IN PAGE and path is %s : %lu\n", path, lsn_ref);
+        // uint64_t latest_flushed_lsn = get_latest_flushed_LSN();
+
         /// Page offset is the one in function parameters that we received the call with. The buffer_offset is for the
         /// current buffer to be written. Their addition gives us the actual offset of the page in the file.
         off_t page_offset_in_file = offset + buffer_offset;
-        int readers_count_ref = *reinterpret_cast<const int *>(write_buf + buffer_offset);
-        int state = *reinterpret_cast<const int*>(write_buf + buffer_offset + sizeof(int));
-        printf("First int: %d, Second int: %d\n", readers_count_ref, state);
+        /// Write Size
+        size_t write_size = (remaining_size > page_size) ? page_size : remaining_size;
+        // if (state == 2 || (strcmp(path, "/sp_segment.txt") == 0 && lsn_ref > latest_flushed_lsn)) {
 
-        size_t lsn_ref = *reinterpret_cast<const size_t *>(write_buf + buffer_offset + 2 * sizeof(int) + sizeof(size_t));
+        if (!is_write_valid(current_buffer, path, fuse_root_dir)) {
+            printf("INVALID_WRITE\n");
 
-        printf("LSN IN PAGE and path is %s : %lu\n", path, lsn_ref);
-        get_latest_flushed_LSN();
-        if (state == 2) {
+            notifyDatabase(path, page_offset_in_file, write_size);
+            ///
+            /// sync_file_range() permits fine control when synchronizing the  open file referred to by the file descriptor fd with disk.
+            /// SYNC_FILE_RANGE_WAIT_BEFORE | SYNC_FILE_RANGE_WRITE
+            /// Ensures that all pages in the specified range which were dirty when sync_file_range() was called are placed under write-out.
+            /// This is a start-write-for-data-integrity operation.
+            /// https://www.man7.org/linux/man-pages/man2/sync_file_range.2.html
+            int sync_res = sync_file_range(fd, page_offset_in_file, write_size, SYNC_FILE_RANGE_WAIT_BEFORE | SYNC_FILE_RANGE_WRITE);
+            if( sync_res == -1) {
+                printf("sync_file_range error: %d, %s\n", errno, strerror(errno));
+            }
 
-            notifyDatabase(path, page_offset_in_file);
+            ///
             res = -EINVAL;
             printf(" --> FAILED TO WRITE %zu bytes to %s at offset %ld in file.\n", write_size, fpath, page_offset_in_file);
+            /// FOR TESTING BEHAVIOR
+            /// return res;
+
+            ///
             remaining_size -= write_size;
             write_buf += write_size;
             buffer_offset += write_size;
