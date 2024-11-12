@@ -173,37 +173,37 @@ void compareVectors(const std::vector<std::string> &vector1, const std::vector<s
     // std::cout << "Vectors are equal!" << std::endl;
 }
 
-int main() {
-    auto db = moderndbs::Database();
-    {
-        auto schema = moderndbs::getTPCHOrderSchema();
-        moderndbs::BufferManager buffer_manager(1024, 10);
-        moderndbs::SchemaSegment schema_segment(49, buffer_manager);
-        schema_segment.set_schema(moderndbs::getTPCHOrderSchema());
-        schema_segment.write();
-    }
-    db.load_schema(49);
-    auto &table = db.get_schema().tables[0];
-
-    std::vector<moderndbs::TID> tids;
-    // Insert into table and read from it immediately
-    for (uint64_t i = 0; i < 1500; ++i) {
-        auto values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
-        auto tid = db.insert(table, values);
-        tids.push_back(tid);
-        auto result = db.read_tuple(table, tid);
-        // if(result.has_value())
-        //     compareVectors(values, result.value());
-    }
-
-   // Now read inserted tids again
-   for (uint64_t i = 0;i < 1500; ++i) {
-      auto expected_values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
-      auto result = db.read_tuple(table, tids[i]);
-      // ASSERT_TRUE(result);
-      // ASSERT_TRUE(compareVectors(expected_values, result.value()));
-   }
-
+// int main() {
+//     auto db = moderndbs::Database();
+//     {
+//         auto schema = moderndbs::getTPCHOrderSchema();
+//         moderndbs::BufferManager buffer_manager(1024, 10);
+//         moderndbs::SchemaSegment schema_segment(49, buffer_manager);
+//         schema_segment.set_schema(moderndbs::getTPCHOrderSchema());
+//         schema_segment.write();
+//     }
+//     db.load_schema(49);
+//     auto &table = db.get_schema().tables[0];
+//
+//     std::vector<moderndbs::TID> tids;
+//     // Insert into table and read from it immediately
+//     for (uint64_t i = 0; i < 1500; ++i) {
+//         auto values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
+//         auto tid = db.insert(table, values);
+//         tids.push_back(tid);
+//         auto result = db.read_tuple(table, tid);
+//         // if(result.has_value())
+//         //     compareVectors(values, result.value());
+//     }
+//
+//    // Now read inserted tids again
+//    for (uint64_t i = 0;i < 1500; ++i) {
+//       auto expected_values = std::vector<std::string>{std::to_string(i), std::to_string(i * 2), (i % 2 == 0 ? "G" : "H"), std::to_string(i * 2), std::to_string(i * 2)};
+//       auto result = db.read_tuple(table, tids[i]);
+//       // ASSERT_TRUE(result);
+//       // ASSERT_TRUE(compareVectors(expected_values, result.value()));
+//    }
+//
 
    // // moderndbs::TID tid = moderndbs::TID(0, 0);
    // // std::cout << tid.get_value() << " Page: " << tid.get_page_id(table.sp_segment) << " Page: " << tid.get_slot() << std::endl;
@@ -219,4 +219,88 @@ int main() {
    //    // std::cout << "TID: " << tid.get_page_id(table.sp_segment) << " Slot: " <<tid.get_slot() << std::endl;
    //    auto result = db.read_tuple(table, tid);
    // }
+// }
+
+
+int main() {
+    // Create the errorListener thread before joining the other threads
+    auto db = moderndbs::Database();
+   {
+       auto schema = moderndbs::getTPCHOrderSchema();
+       moderndbs::BufferManager buffer_manager(1024, 10);
+       moderndbs::SchemaSegment schema_segment(49, buffer_manager);
+       schema_segment.set_schema(moderndbs::getTPCHOrderSchema());
+       schema_segment.write();
+   }
+   db.load_schema(49);
+   auto &table = db.get_schema().tables[0];
+
+    /// INSERTIONS -> INSERT OrderRecords for 20 pages.
+    for (uint64_t i = 0; i < 1600; ++i) {
+        moderndbs::OrderRecord order = {i, i * 2, i * 100, i % 5, (i % 2 == 0 ? 'G' : 'H')};
+        auto transactionID = db.transaction_manager.startTransaction();
+        db.insert(table, order, transactionID);
+        db.transaction_manager.commitTransaction(transactionID);
+    }
+
+    constexpr int num_threads = 4;
+    std::vector<std::thread> workers;
+
+    for (size_t thread = 0; thread < num_threads; ++thread) {
+        workers.emplace_back([thread, &table, &db] {
+            std::mt19937_64 engine{thread};
+            // 5% of queries are scans.
+            std::bernoulli_distribution scan_distr{0.05};
+            // Number of pages accessed by a point query is geometrically distributed.
+            std::geometric_distribution<size_t> num_pages_distr{0.5};
+            // 60% of point queries are reads.
+            std::bernoulli_distribution reads_distr{0.6};
+
+            // Pages and Slots
+            // Out of 20 accesses, 10 are from page 0, 4 from page 1, 2 from page 2, 1 from page 3, and 3 from page 4.
+            std::uniform_int_distribution<uint16_t> page_distr{0, 19};
+            std::uniform_int_distribution<uint16_t> slot_distr{0, 79};
+
+            for (size_t j = 0; j < 100; ++j) {
+                if (scan_distr(engine)) {
+                    /// READ two full segments
+                    auto start_page = page_distr(engine);
+                    auto end_page = start_page + 2;
+                    for (uint16_t pg = start_page; pg < end_page && pg < 20; ++pg) {
+                        for (uint16_t sl = 0; sl < 79; ++sl) {
+                            std::cout << " Page: " << pg << " SLOT: " << sl << " \n";
+                            moderndbs::TID tid{pg, sl};
+                            std::cout << " Reading Tuple with TID: " << tid.get_value() << " \n";
+                            auto transactionID = db.transaction_manager.startTransaction();
+                            db.read_tuple(table, tid, transactionID);
+                            db.transaction_manager.commitTransaction(transactionID);
+                        }
+                    }
+                } else {
+                    if (reads_distr(engine)) {
+                        auto page = page_distr(engine);
+                        auto slot = slot_distr(engine);
+                        std::cout << " Page: " << page << " SLOT: " << slot << " \n";
+                        moderndbs::TID tid{page, slot};
+                        std::cout << " Reading Tuple with TID: " << tid.get_value() << " \n";
+                        auto transactionID = db.transaction_manager.startTransaction();
+                        db.read_tuple(table, tid, transactionID);
+                        db.transaction_manager.commitTransaction(transactionID);
+                    } else {
+                        moderndbs::OrderRecord order = {j, j * 2, j * 100, j % 5, (j % 2 == 0 ? 'G' : 'H')};
+                        auto transactionID = db.transaction_manager.startTransaction();
+                        db.insert(table, order, transactionID);
+                        db.transaction_manager.commitTransaction(transactionID);
+                    }
+                }
+            }
+        });
+    }
+
+    for (auto &t: workers) {
+        t.join();
+    }
+
+    std::cout << "FINITO\n";
+    return 0;
 }

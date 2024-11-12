@@ -15,4 +15,5 @@ set(
     include/moderndbs/segment.h
     include/moderndbs/slotted_page.h
     include/moderndbs/custom_read_writer_lock.h
+    include/moderndbs/transaction_manager.h
 )

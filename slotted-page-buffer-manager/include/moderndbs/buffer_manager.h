@@ -31,6 +31,8 @@ class BufferFrame {
    CustomReadWriteLock custom_latch;
 
    //  LSN
+   uint64_t lsn;
+
    bool is_dirty;
    bool is_exclusive;
    int64_t num_fixed;
@@ -43,6 +45,8 @@ class BufferFrame {
 
    /// Returns a pointer to this page's data with locks.
    char* get_data_with_locks() const;
+
+   void set_lsn(uint64_t lsn){ this->lsn = lsn; };
 };
 
 class buffer_full_error

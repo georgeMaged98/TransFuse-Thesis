@@ -4,14 +4,16 @@
 #include "moderndbs/buffer_manager.h"
 #include "moderndbs/schema.h"
 #include "moderndbs/slotted_page.h"
+#include "transaction_manager.h"
 #include <array>
 #include <cmath>
 #include <optional>
 #include <math.h>
 
 namespace moderndbs {
+struct OrderRecord;
 
-    class Segment {
+class Segment {
     public:
         /// Constructor.
         /// @param[in] segment_id       Id of the segment.
@@ -137,7 +139,7 @@ namespace moderndbs {
         /// @param[in] record       The buffer that is written.
         /// @param[in] record_size  The capacity of the buffer that is written.
         /// @return                 The bytes that have been written.
-        uint32_t write(TID tid, std::byte *record, uint32_t record_size,bool is_update = false);
+        uint32_t write(TID tid, std::byte *record, uint32_t record_size, uint64_t lsn, bool is_update = false);
 
         /// Resize a record.
         /// Resize should first check whether the new size still fits on the page.
@@ -149,7 +151,7 @@ namespace moderndbs {
         /// Removes the record from the slotted page
         /// @param[in] tid          The TID that identifies the record.
         /// @return                 whether the record was successfully deleted or not
-        bool erase(TID tid);
+        bool erase(TID tid, uint64_t lsn);
 
     protected:
         /// Schema segment
@@ -159,6 +161,60 @@ namespace moderndbs {
         /// The table
         schema::Table &table;
     };
+
+struct LogRecord {
+   TransactionState state;
+   uint64_t lsn;
+   uint64_t transactionId;
+   OrderRecord* oldOrderRecord;
+   OrderRecord* newOrderRecord;
+
+   LogRecord(TransactionState state, uint64_t lsn, uint64_t transactionId, OrderRecord* oldOrderRecord, OrderRecord* newOrderRecord)
+      : state(state), lsn(lsn), transactionId(transactionId), oldOrderRecord(oldOrderRecord), newOrderRecord(newOrderRecord) {}
+
+   LogRecord() : state(TransactionState::ABORT), lsn(0), transactionId(0), oldOrderRecord(nullptr), newOrderRecord(nullptr){};
+};
+
+class WALSegment : public Segment {
+   public:
+
+
+   explicit WALSegment(uint16_t segment_id, BufferManager &buffer_manager);
+
+   /// Returns the LSN of this record
+   uint64_t appendRecord(uint64_t transaction_id, TransactionState state, OrderRecord* old_rec, OrderRecord* new_rec);
+
+   /// Returns the next number of monotonically increasing LSN
+   uint64_t nextLSN();
+
+   /// Flushes the current WAL records to disk.
+   void flushWal();
+   /// Appends to the End of WAL File
+   void append_to_WAL_Segment(const char* data, size_t data_size);
+
+   std::pair<char*, size_t> serialize();
+
+   /// Timer function that wakes up every x seconds to flush WAL to disk.
+   void runEveryXSeconds(uint64_t seconds, std::atomic<bool>& running) {
+      while (running) {
+         std::this_thread::sleep_for(std::chrono::seconds(seconds));
+         if (running) {
+            flushWal();
+         }
+      }
+   }
+
+   /// Vector storing LogRecords that are not flushed to disk.
+   std::vector<LogRecord> records;
+   /// Log Sequence Number
+   uint64_t LSN{};
+   /// WAL latch
+   std::shared_mutex wal_mutex;
+   /// Last LSN in log on disk
+   uint64_t flushedLSN{};
+   /// Last Transaction Number in log on disk
+   uint64_t latest_txn_no;
+};
 
 } // namespace moderndbs
 

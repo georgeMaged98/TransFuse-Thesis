@@ -89,7 +89,7 @@ std::optional<uint32_t> SPSegment::read(TID tid, std::byte* record, uint32_t cap
    return read_bytes;
 }
 
-uint32_t SPSegment::write(TID tid, std::byte* record, uint32_t record_size, bool is_update) {
+uint32_t SPSegment::write(TID tid, std::byte* record, uint32_t record_size, uint64_t lsn, bool is_update) {
    // std::cout << "Writing to page " << tid.get_page_id(segment_id) << " at slot " << tid.get_slot() << "\n";
 
    // TODO: add your implementation here
@@ -110,12 +110,16 @@ uint32_t SPSegment::write(TID tid, std::byte* record, uint32_t record_size, bool
    if (slot.is_redirect()) {
       TID redirect_tid = slot.as_redirect_tid();
       buffer_manager.unfix_page(page, true);
-      return write(redirect_tid, record, record_size);
+      return write(redirect_tid, record, record_size, lsn);
    }
 
    uint32_t written_bytes = std::min(slot.get_size(), record_size);
    auto offset = slot.get_offset(); // The place at which we write the data.
    memcpy(slotted_page.get_data() + offset, record, written_bytes);
+
+   /// UPDATE LSN on page
+   page->set_lsn(lsn);
+
    buffer_manager.unfix_page(page, true);
    // sp_lock.unlock();
    return written_bytes;
@@ -171,7 +175,7 @@ void SPSegment::resize(TID tid, uint32_t new_length) {
    }
 }
 
-bool SPSegment::erase(TID tid) {
+bool SPSegment::erase(TID tid, uint64_t lsn) {
    // TODO: add your implementation here
    fsi.fsi_mutex.lock();
    // tid.get_page_id() does the same functionality of the XOR that was used in the schema_segment and fsi_segment.
@@ -187,9 +191,13 @@ bool SPSegment::erase(TID tid) {
       return false;
    }
    if (slot.is_redirect()) {
-      return erase(slot.as_redirect_tid());
+      return erase(slot.as_redirect_tid(), lsn);
    }
    slotted_page.erase(tid.get_slot());
+
+   /// UPDATE LSN on page
+   page->set_lsn(lsn);
+
    buffer_manager.unfix_page(page, true);
    fsi.update(tid.get_page_id(segment_id), slotted_page.get_free_space());
    fsi.fsi_mutex.unlock();
