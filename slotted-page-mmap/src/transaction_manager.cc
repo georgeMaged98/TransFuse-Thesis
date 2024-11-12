@@ -15,7 +15,7 @@ TransactionManager::TransactionManager(WALSegment& wal_segment) : transactionCou
 
 int TransactionManager::startTransaction() {
    auto new_txn_id =  ++transactionCounter;
-   wal_segment.appendRecord(new_txn_id, moderndbs::TransactionState::BEGIN, nullptr, nullptr);
+   wal_segment.appendRecord(new_txn_id, TransactionState::BEGIN, nullptr, nullptr);
    return new_txn_id;
 }
 

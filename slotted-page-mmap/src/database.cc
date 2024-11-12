@@ -21,7 +21,7 @@ void moderndbs::Database::update_tuple(const schema::Table& table, const TID tid
    auto* data = reinterpret_cast<std::byte*>(&order);
    auto order_size = sizeof(OrderRecord);
    // Write the data to the segment
-   sp.write(tid, data, order_size, true, lsn);
+   sp.write(tid, data, order_size,  lsn, true);
    std::cout << "Tuple with TID " << tid.get_value() << " updated!\n";
 }
 

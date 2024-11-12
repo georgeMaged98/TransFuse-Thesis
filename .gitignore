@@ -3,12 +3,12 @@
 /slotted-page-mmap/cmake-build-debug/
 /slotted-page-mmap/cmake-build-release/
 /mmap-btree/cmake-build-debug/
-/Transfuse/cmake-build-debug/
-/Transfuse/.idea/
+/TransFuse/cmake-build-debug/
+/TransFuse/.idea/
 /slotted-page-buffer-manager/.idea/
 /slotted-page-mmap/.idea/
 /mmap-btree/.idea/
 /slotted-page-buffer-manager/.idea/
-/Transfuse/.idea/
-/Transfuse/.vscode/
+/TransFuse/.idea/
+/TransFuse/.vscode/
 /**/.vscode/
