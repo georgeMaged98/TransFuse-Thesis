@@ -176,6 +176,15 @@ class WALSegment : public Segment {
    /// @param[in] file_mapper      The file mapper that should be used by the fsi segment.
    explicit WALSegment(FileMapper& file_mapper);
 
+   ~WALSegment() {
+      // Signal the background thread to stop and wait for it to join
+      stop_background_flush = true;
+      flushWal();
+      if (flush_thread.joinable()) {
+         flush_thread.join();
+      }
+   }
+
    /// Returns the LSN of this record
    uint64_t appendRecord(uint64_t transaction_id, TransactionState state, OrderRecord* old_rec, OrderRecord* new_rec);
 
@@ -185,13 +194,13 @@ class WALSegment : public Segment {
    /// Flushes the current WAL records to disk.
    void flushWal();
 
-   std::pair<char*, size_t> serialize();
+   std::pair<std::vector<char>, size_t>  serialize();
 
    /// Timer function that wakes up every x seconds to flush WAL to disk.
-   void runEveryXSeconds(uint64_t seconds, std::atomic<bool>& running) {
-      while (running) {
-         std::this_thread::sleep_for(std::chrono::seconds(seconds));
-         if (running) {
+   void runEveryXSeconds(uint64_t milliseconds, std::atomic<bool>& stop_sig) {
+      while (!stop_sig) {
+         std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
+         if (!stop_sig) {
             flushWal();
          }
       }
@@ -207,6 +216,12 @@ class WALSegment : public Segment {
    uint64_t flushedLSN{};
    /// Last Transaction Number in log on disk
    uint64_t latest_txn_no;
+
+   std::atomic<bool> stop_background_flush;
+
+   std::thread flush_thread;
+
+   uint64_t flush_interval_ms = 100;
 };
 
 } // namespace moderndbs

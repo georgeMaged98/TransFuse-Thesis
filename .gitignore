@@ -4,6 +4,7 @@
 /slotted-page-mmap/cmake-build-release/
 /mmap-btree/cmake-build-debug/
 /TransFuse/cmake-build-debug/
+/TransFuse/cmake-build-release/
 /TransFuse/.idea/
 /slotted-page-buffer-manager/.idea/
 /slotted-page-mmap/.idea/

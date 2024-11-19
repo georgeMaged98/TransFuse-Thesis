@@ -98,7 +98,7 @@ class Page {
 class FileMapper {
    static constexpr uint64_t maxMapSize = 10LL << 30; // 10GB
    static constexpr uint64_t maxMmapStep = 1LL << 30; // 1GB
-   static constexpr uint64_t minMmapFileSize = 1LL << 30; // 32KB
+   static constexpr uint64_t minMmapFileSize = 1LL << 30; // 1GB
 
    public:
    static constexpr uint32_t headerSize = 2 * sizeof(size_t) + 1;
@@ -110,6 +110,12 @@ class FileMapper {
 
    [[nodiscard]] std::shared_ptr<Page> get_page(size_t page_number, bool is_exclusive);
 
+   [[nodiscard]] void* get_page_address_in_mapped_region(size_t page_number) const;
+
+   [[nodiscard]] int is_memory_resident(size_t page_offset);
+
+   void make_no_op(size_t page_offset);
+
    void release_page(std::shared_ptr<Page> page);
 
    [[nodiscard]] size_t get_page_size() const { return page_size_; }
@@ -120,7 +126,9 @@ class FileMapper {
 
    void append_to_wal_file(const char *data, size_t size);
 
-   void msync_file(const uint64_t pageNo) const;
+   void msync_file(uint64_t page_offset, uint64_t write_size) const;
+
+   void sync_file_range_with_disk(uint64_t page_offset_in_file, uint64_t write_size) const;
 
    private:
    std::string filename_;
@@ -130,11 +138,12 @@ class FileMapper {
    /// (e.g.) a file with size of 32KB can hold (32KB / page_size) entries.
    size_t num_pages_;
    void* mmap_ptr_;
-
+   /// File Descriptor
+   int fd;
    [[nodiscard]] uint64_t calculate_file_size(uint64_t oldFileSize) const;
 
    void map_file(const uint64_t minSize) {
-      const int fd = open(filename_.c_str(), O_RDWR | O_CREAT | O_APPEND,
+      fd = open(filename_.c_str(), O_RDWR | O_CREAT | O_APPEND,
                           static_cast<mode_t>(0664));
 
       if (fd == -1) {
@@ -153,7 +162,9 @@ class FileMapper {
          size = fileInfo.st_size;
       }
 
-      file_size_ = calculate_file_size(size);
+      size_t oldFileSize = fileInfo.st_size;
+      size_t newFileSize = calculate_file_size(size);
+      file_size_ = newFileSize;
 
       if (file_size_ < minMmapFileSize) {
          file_size_ = minMmapFileSize;
@@ -164,14 +175,36 @@ class FileMapper {
          close(fd);
          return;
       }
-
       num_pages_ = file_size_ / page_size_;
 
-      mmap_ptr_ = mmap(nullptr, file_size_, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-      if (mmap_ptr_ == MAP_FAILED) {
-         close(fd);
-         perror("Failed to mmap file");
-         return;
+      if (mmap_ptr_) {
+         void* new_mmap_ptr = mremap(mmap_ptr_, oldFileSize, newFileSize, 0);
+         if (new_mmap_ptr == MAP_FAILED) {
+            close(fd);
+            std::cerr << strerror(errno) << "\n";
+            perror("Failed to mmap file");
+            return;
+         }
+         mmap_ptr_ = new_mmap_ptr;
+
+         // if (msync(mmap_ptr_, file_size_, MS_ASYNC) == -1) {
+         //    perror("msync failed");
+         //    return nullptr;
+         // }
+         //
+         // if (munmap(mmap_ptr_, file_size_) == -1) {
+         //    perror("Failed to unmap file");
+         //    return nullptr;
+         // }
+         // mmap_ptr_ = nullptr;
+      }else {
+         mmap_ptr_ = mmap(nullptr, file_size_, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+         if (mmap_ptr_ == MAP_FAILED) {
+            close(fd);
+            std::cerr << strerror(errno) << "\n";
+            perror("Failed to mmap file");
+            return;
+         }
       }
 
       // Use madvise with the MADV_NOHUGEPAGE flag

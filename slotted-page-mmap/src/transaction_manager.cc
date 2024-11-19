@@ -21,6 +21,6 @@ int TransactionManager::startTransaction() {
 
 void TransactionManager::commitTransaction(int transactionID) {
    wal_segment.appendRecord(transactionID, TransactionState::COMMIT, nullptr, nullptr);
-   wal_segment.flushWal();
+   //wal_segment.flushWal();
    std::cout << "Transaction " << transactionID << " committed.\n";
 }

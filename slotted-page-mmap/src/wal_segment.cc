@@ -30,6 +30,9 @@ WALSegment::WALSegment(FileMapper &file_mapper)
       latest_txn_no = record.transactionId;
    }
    file_mapper.release_page(page);
+
+   flush_thread = std::thread(&WALSegment::runEveryXSeconds, this, flush_interval_ms, std::ref(stop_background_flush));
+
 }
 
 uint64_t WALSegment::appendRecord(const uint64_t transaction_id, const TransactionState state, OrderRecord* old_rec, OrderRecord* new_rec) {
@@ -37,24 +40,24 @@ uint64_t WALSegment::appendRecord(const uint64_t transaction_id, const Transacti
    auto lsn = nextLSN();
    auto log_record = LogRecord(state, lsn, transaction_id, old_rec, new_rec);
    records.push_back(log_record);
-   printf("Append record - TransactionID: %lu, State:  %d, LSN: %lu\n", transaction_id, state, lsn);
+   // printf("Append record - TransactionID: %lu, State:  %d, LSN: %lu\n", transaction_id, state, lsn);
    return log_record.lsn;
 }
 
-
-std::pair<char *, size_t> WALSegment::serialize() {
+std::pair<std::vector<char>, size_t> WALSegment::serialize() {
    uint64_t dataSize = records.size() * sizeof(LogRecord);
-   char *data = new char[dataSize];
-   std::memcpy(data, records.data(), dataSize);
-   return {data, dataSize};
+   std::vector<char> data(dataSize);
+   std::memcpy(data.data(), records.data(), dataSize);
+   return {std::move(data), dataSize};
 }
+
 
 void WALSegment::flushWal() {
    std::unique_lock lock(wal_mutex);
-   std::pair<char *, size_t> walData = this->serialize();
+   auto walData = this->serialize();
    if (walData.second != 0) {
-      file_mapper.append_to_wal_file(walData.first, walData.second);
+      file_mapper.append_to_wal_file(walData.first.data(), walData.second);
       records.clear();
-      cout << "Flushed LSN " << this->LSN << "\n";
    }
 }
+

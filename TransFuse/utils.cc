@@ -30,18 +30,6 @@ static void logMessage(const std::string &message) {
 }
 
 static void notifyDatabase(const char *filePath, const uint64_t page_offset, const uint64_t writeSize) {
-    // int sock;
-    // struct sockaddr_un addr;
-    // const char* msg = "Invalid write detected";
-    //
-    // sock = socket(AF_UNIX, SOCK_STREAM, 0);
-    // addr.sun_family = AF_UNIX;
-    // strcpy(addr.sun_path, "/tmp/db_socket");
-    //
-    // connect(sock, (struct sockaddr*)&addr, sizeof(addr));
-    // send(sock, msg, strlen(msg), 0);
-    //
-    // close(sock);
     std::string message = std::string(filePath) + "-" + std::to_string(page_offset) + "-" + std::to_string(writeSize);
     int client_sock;
     struct sockaddr_un addr;
@@ -121,6 +109,7 @@ static bool check_valid_wal(const char *buffer, const char *path, const char *ro
     uint64_t latest_flushed_lsn = get_latest_flushed_LSN(root_path);
     bool is_valid = strcmp(path, "/sp_segment.txt") != 0 || lsn_ref <= latest_flushed_lsn;
     return is_valid;
+    // return true;
 }
 
 

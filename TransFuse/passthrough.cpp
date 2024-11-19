@@ -447,23 +447,13 @@ static int transfuse_write(const char *path, const char *buf, const size_t size,
 
     while (remaining_size > 0) {
 
-        const char *current_buffer = write_buf + buffer_offset;
-
-        // int readers_count_ref = *reinterpret_cast<const int *>(write_buf + buffer_offset);
-        // int state = *reinterpret_cast<const int*>(write_buf + buffer_offset + sizeof(int));
-        // printf("First int: %d, Second int: %d\n", readers_count_ref, state);
-
-        // size_t lsn_ref = *reinterpret_cast<const size_t *>(write_buf + buffer_offset + 2 * sizeof(int) + sizeof(size_t));
-        //
-        // printf("LSN IN PAGE and path is %s : %lu\n", path, lsn_ref);
-        // uint64_t latest_flushed_lsn = get_latest_flushed_LSN();
+        const char *current_buffer = buf + buffer_offset;
 
         /// Page offset is the one in function parameters that we received the call with. The buffer_offset is for the
         /// current buffer to be written. Their addition gives us the actual offset of the page in the file.
         off_t page_offset_in_file = offset + buffer_offset;
         /// Write Size
         size_t write_size = (remaining_size > page_size) ? page_size : remaining_size;
-        // if (state == 2 || (strcmp(path, "/sp_segment.txt") == 0 && lsn_ref > latest_flushed_lsn)) {
 
         if (!is_write_valid(current_buffer, path, fuse_root_dir)) {
             printf("INVALID_WRITE\n");
@@ -475,18 +465,15 @@ static int transfuse_write(const char *path, const char *buf, const size_t size,
             /// Ensures that all pages in the specified range which were dirty when sync_file_range() was called are placed under write-out.
             /// This is a start-write-for-data-integrity operation.
             /// https://www.man7.org/linux/man-pages/man2/sync_file_range.2.html
-            int sync_res = sync_file_range(fd, page_offset_in_file, write_size, SYNC_FILE_RANGE_WAIT_BEFORE | SYNC_FILE_RANGE_WRITE);
-            if( sync_res == -1) {
-                printf("sync_file_range error: %d, %s\n", errno, strerror(errno));
-            }
+            // int sync_res = sync_file_range(fd, page_offset_in_file, write_size, SYNC_FILE_RANGE_WAIT_BEFORE | SYNC_FILE_RANGE_WRITE);
+            // if( sync_res == -1) {
+            //     printf("sync_file_range error: %d, %s\n", errno, strerror(errno));
+            // }
 
             ///
-            res = -EINVAL;
+            // res = -EINVAL;
             printf(" --> FAILED TO WRITE %zu bytes to %s at offset %ld in file.\n", write_size, fpath, page_offset_in_file);
-            /// FOR TESTING BEHAVIOR
-            /// return res;
 
-            ///
             remaining_size -= write_size;
             write_buf += write_size;
             buffer_offset += write_size;

@@ -56,6 +56,7 @@ std::optional<moderndbs::OrderRecord> moderndbs::Database::read_tuple(const sche
    OrderRecord record;
    auto order_size = sizeof(OrderRecord);
    memcpy(&record, read_buffer.data(), order_size);
+   std::cout << "Reading Tuple with TID " << tid.get_value() << " !\n";
 
    return record;
 }
