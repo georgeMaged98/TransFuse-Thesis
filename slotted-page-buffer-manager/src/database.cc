@@ -48,60 +48,6 @@ moderndbs::schema::Schema &moderndbs::Database::get_schema() {
     return *schema_segment->get_schema();
 }
 
-// std::optional<moderndbs::OrderRecord> moderndbs::Database::read_tuple(const moderndbs::schema::Table &table, const moderndbs::TID tid) {
-    // auto &sps = *slotted_pages.at(table.sp_segment);
-    // auto read_buffer = std::vector<char>(1024);
-    // auto read_bytes = sps.read(tid, reinterpret_cast<std::byte *>(read_buffer.data()), read_buffer.size());
-    // if (!read_bytes.has_value()) {
-    //     return std::nullopt;
-    // }
-    //
-    // auto values = std::vector<std::string>();
-    // // Deserialize the data
-    // std::cout << "TID " << tid.get_value() << " - Page: " << tid.get_page_id(table.sp_segment) << " - Slot: " << tid.get_slot() << "  :  ";
-    // char *current = read_buffer.data();
-    // for (auto &column: table.columns) {
-    //     int integer;
-    //     switch (column.type.tclass) {
-    //         case schema::Type::Class::kInteger:
-    //             integer = *reinterpret_cast<int *>(current);
-    //             std::cout << integer;
-    //             values.emplace_back(std::to_string(integer));
-    //             current += sizeof(int);
-    //             break;
-    //         case schema::Type::Class::kChar:
-    //             std::string str;
-    //             for (size_t j = 0; j < column.type.length; ++j) {
-    //                 std::cout << *current;
-    //                 str += *current;
-    //                 ++current;
-    //             }
-    //             values.emplace_back(str);
-    //             break;
-    //     }
-    //     if (std::distance(read_buffer.data(), current) > read_bytes.value()) {
-    //         break;
-    //     }
-    //     std::cout << " | ";
-    // }
-    // std::cout << "\n";
-   // auto &sps = *slotted_pages.at(table.sp_segment);
-   // auto read_buffer = std::vector<char>(sizeof(OrderRecord));  // Ensure buffer size matches OrderRecord
-   // auto read_bytes = sps.read(tid, reinterpret_cast<std::byte *>(read_buffer.data()), read_buffer.size());
-   //
-   // // If read failed, return std::nullopt
-   // if (!read_bytes.has_value()) {
-   //    return std::nullopt;
-   // }
-   //
-   // // Cast the buffer to an OrderRecord
-   // const OrderRecord *record = reinterpret_cast<const OrderRecord *>(read_buffer.data());
-   //
-   // // Return a copy of the record
-   // return *record;
-   //  // return values;
-// }
-
 std::optional<moderndbs::OrderRecord> moderndbs::Database::read_tuple(const schema::Table &table, const TID tid, uint64_t transactionId) {
    auto &sps = *slotted_pages.at(table.sp_segment);
    // Prepare buffer for reading the data

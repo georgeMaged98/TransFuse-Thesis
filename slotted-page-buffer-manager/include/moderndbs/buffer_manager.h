@@ -32,6 +32,9 @@ class BufferFrame {
 
    //  LSN
    uint64_t lsn;
+   //  to check if page is currently in eviction process!
+   bool is_evicted;
+
 
    bool is_dirty;
    bool is_exclusive;

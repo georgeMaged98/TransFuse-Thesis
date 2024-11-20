@@ -15,10 +15,10 @@ uint64_t WALSegment::nextLSN() {
 }
 
 WALSegment::WALSegment(uint16_t segment_id, BufferManager& buffer_manager)
-   : Segment(segment_id, buffer_manager) {
+   : Segment(segment_id, buffer_manager), stop_background_flush(false) {
    std::unique_lock lock(wal_mutex);
 
-   std::unique_ptr<File> file = File::open_file((std::to_string(segment_id) + ".txt").c_str(), File::Mode::WRITE);
+   std::unique_ptr<File> file = File::open_file((std::to_string(segment_id) + ".txt").c_str(), File::Mode::READ);
    char latest_flushed_lsn_buffer[sizeof(uint64_t)];
    file->read_block(0, sizeof(uint64_t), latest_flushed_lsn_buffer);
    const auto& latest_flushed_LSN = *reinterpret_cast<uint64_t*>(latest_flushed_lsn_buffer);
@@ -30,12 +30,13 @@ WALSegment::WALSegment(uint16_t segment_id, BufferManager& buffer_manager)
       /// sizeof(uint64_t) -> LSN COUNT
       auto wal_rec_size = sizeof(LogRecord);
       char last_record_buffer[wal_rec_size];
-      size_t file_offset = sizeof(uint64_t) + latest_flushed_LSN * sizeof(LogRecord);
+      size_t file_offset = sizeof(uint64_t) + (latest_flushed_LSN - 1) * sizeof(LogRecord);
       file->read_block(file_offset, wal_rec_size, last_record_buffer);
       LogRecord record;
       memcpy(&record, last_record_buffer, wal_rec_size);
       latest_txn_no = record.transactionId;
    }
+   flush_thread = std::thread(&WALSegment::runEveryXSeconds, this, flush_interval_ms, std::ref(stop_background_flush));
 }
 
 uint64_t WALSegment::appendRecord(const uint64_t transaction_id, const TransactionState state, OrderRecord* old_rec, OrderRecord* new_rec) {
@@ -43,14 +44,13 @@ uint64_t WALSegment::appendRecord(const uint64_t transaction_id, const Transacti
    auto lsn = nextLSN();
    auto log_record = LogRecord(state, lsn, transaction_id, old_rec, new_rec);
    records.push_back(log_record);
-   printf("Append record - TransactionID: %lu, State:  %d, LSN: %lu\n", transaction_id, state, lsn);
    return log_record.lsn;
 }
 
-std::pair<char*, size_t> WALSegment::serialize() {
-   uint64_t dataSize = records.size() * sizeof(LogRecord);
+std::pair<char*, size_t> WALSegment::serialize(std::vector<LogRecord> recs) {
+   uint64_t dataSize = recs.size() * sizeof(LogRecord);
    char* data = new char[dataSize];
-   std::memcpy(data, records.data(), dataSize);
+   std::memcpy(data, recs.data(), dataSize);
    return {data, dataSize};
 }
 
@@ -59,7 +59,6 @@ void WALSegment::append_to_WAL_Segment(const char* data, size_t data_size) {
    char* latest_flushed_lsn_buffer = new char[sizeof(uint64_t)];
    file->read_block(0, sizeof(uint64_t), latest_flushed_lsn_buffer);
    const auto& latest_flushed_LSN = *reinterpret_cast<uint64_t*>(latest_flushed_lsn_buffer);
-   printf(" BEFORE APPENDING: LATEST FLUSHED LSN: %lu \n", latest_flushed_LSN);
    /// sizeof(uint64_t) -> LSN COUNT
    size_t file_offset = sizeof(uint64_t) + latest_flushed_LSN * sizeof(LogRecord);
    size_t cur_file_size = file->size();
@@ -70,16 +69,25 @@ void WALSegment::append_to_WAL_Segment(const char* data, size_t data_size) {
    // Ensure that the new LSN count is written to the beginning of the file
    file->write_block(reinterpret_cast<const char*>(&new_lsn_count), 0, sizeof(new_lsn_count));
 
-   printf(" LATEST FLUSHED LSN: %lu \n", new_lsn_count);
    file->write_block(data, file_offset, data_size);
 }
 
 void WALSegment::flushWal() {
-   std::unique_lock lock(wal_mutex);
-   std::pair<char*, size_t> walData = this->serialize();
-   if (walData.second != 0) {
+   std::vector<LogRecord> temp_records;
+   {
+      std::unique_lock lock(wal_mutex);
+      std::swap(temp_records, records);
+   }
+
+   if (!temp_records.empty()) {
+      uint64_t currentLSN = LSN.load();
+      std::pair<char*, size_t> walData = serialize(temp_records);
       append_to_WAL_Segment(walData.first, walData.second);
-      records.clear();
-      std::cout << "Flushed LSN " << this->LSN << "\n";
+      delete[] walData.first;
+      {
+         std::unique_lock lock(wal_mutex);
+         flushedLSN.store(currentLSN);  // Ensure flushed LSN is in sync with the latest LSN
+         // std::cout << "Flushed LSN " << flushedLSN.load() << "\n";
+      }
    }
 }

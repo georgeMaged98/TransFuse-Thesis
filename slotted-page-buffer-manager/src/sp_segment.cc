@@ -14,7 +14,6 @@ SPSegment::SPSegment(uint16_t segment_id, BufferManager& buffer_manager, SchemaS
 }
 
 TID SPSegment::allocate(uint32_t size) {
-   // TODO: add your implementation here
    // Allocate a new record.
    // The allocate method should use the free-space inventory to find a suitable page quickly.
    fsi.fsi_mutex.lock();
@@ -61,7 +60,6 @@ TID SPSegment::allocate(uint32_t size) {
 }
 
 std::optional<uint32_t> SPSegment::read(TID tid, std::byte* record, uint32_t capacity) const {
-   // TODO: add your implementation here
    // The tid.get_page_id() does the same functionality of the XOR that was used in the schema_segment and fsi_segment.
    // Hence, we just pass the result page_id to buffer_manager
    auto page_id = tid.get_page_id(segment_id);
@@ -74,6 +72,7 @@ std::optional<uint32_t> SPSegment::read(TID tid, std::byte* record, uint32_t cap
    auto& slot = slotted_page->get_slots()[slot_id];
 
    if (slot.is_empty()) {
+      buffer_manager.unfix_page(page, false);
       return std::nullopt;
    }
    if (slot.is_redirect()) {
@@ -91,8 +90,6 @@ std::optional<uint32_t> SPSegment::read(TID tid, std::byte* record, uint32_t cap
 
 uint32_t SPSegment::write(TID tid, std::byte* record, uint32_t record_size, uint64_t lsn, bool is_update) {
    // std::cout << "Writing to page " << tid.get_page_id(segment_id) << " at slot " << tid.get_slot() << "\n";
-
-   // TODO: add your implementation here
    // The tid.get_page_id() does the same functionality of the XOR that was used in the schema_segment and fsi_segment.
    // Hence, we just pass the result page_id to buffer_manager
    auto page_id = tid.get_page_id(segment_id);
@@ -104,6 +101,7 @@ uint32_t SPSegment::write(TID tid, std::byte* record, uint32_t record_size, uint
    auto slot_id = tid.get_slot();
    auto& slot = slotted_page.get_slots()[slot_id];
    if (is_update && slot.is_empty()) {
+      buffer_manager.unfix_page(page, false);
       throw std::logic_error("TID Not Found!");
    }
 
@@ -176,7 +174,6 @@ void SPSegment::resize(TID tid, uint32_t new_length) {
 }
 
 bool SPSegment::erase(TID tid, uint64_t lsn) {
-   // TODO: add your implementation here
    fsi.fsi_mutex.lock();
    // tid.get_page_id() does the same functionality of the XOR that was used in the schema_segment and fsi_segment.
    // Hence, we just pass the result page_id to buffer_manager
@@ -188,9 +185,11 @@ bool SPSegment::erase(TID tid, uint64_t lsn) {
    auto& slot = slotted_page.get_slots()[tid.get_slot()];
 
    if (slot.is_empty()) {
+      buffer_manager.unfix_page(page, false);
       return false;
    }
    if (slot.is_redirect()) {
+      buffer_manager.unfix_page(page, false);
       return erase(slot.as_redirect_tid(), lsn);
    }
    slotted_page.erase(tid.get_slot());

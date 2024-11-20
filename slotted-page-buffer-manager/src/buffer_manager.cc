@@ -51,7 +51,6 @@ void BufferManager::read_buffer_frame_from_file(uint64_t page_id, BufferFrame& b
 void BufferManager::evict_page() {
    // check fifo queue -> if not empty, evict first element in fifo queue
    int64_t evicted_page_id = -1;
-   vector<uint64_t>::iterator pos;
 
    for (auto it = this->fifo_queue.begin(); it != this->fifo_queue.end(); ++it) {
       auto bf_it = this->hashtable.find(*it);
@@ -59,52 +58,40 @@ void BufferManager::evict_page() {
          continue; // Skip if page is not found in hashtable
       }
       const auto bf = bf_it->second;
-      if (bf->num_fixed == 0 && !bf->is_dirty) {
+      if (bf->num_fixed == 0 && !bf->is_dirty && !bf->is_evicted) {
          evicted_page_id = *it;
-         pos = it;
          break;
       }
       // Above condition is to prioritize non-dirty pages, however if all pages are dirty, this conditions chooses first one to evict and write to disk.
-      if (bf->num_fixed == 0) {
+      if (bf->num_fixed == 0 && !bf->is_evicted) {
          evicted_page_id = *it;
-         pos = it;
          break;
       }
    }
-   if (evicted_page_id != -1) {
-      this->fifo_queue.erase(pos);
-      this->fifo_set.erase(evicted_page_id);
-
-   } else { // EVICT first element in LRU queue
-      for (auto it = this->lru_queue.begin(); it != this->lru_queue.end(); ++it) {
+  for (auto it = this->lru_queue.begin(); it != this->lru_queue.end(); ++it) {
          auto bf_it = this->hashtable.find(*it);
          if (bf_it == hashtable.end()) {
             continue; // Skip if page is not found in hashtable
          }
 
          const auto bf = bf_it->second;
-         if (bf->num_fixed == 0 && !bf->is_dirty) {
+         if (bf->num_fixed == 0 && !bf->is_dirty && !bf->is_evicted) {
             evicted_page_id = *it;
-            pos = it;
             break;
          }
          // Above condition is to prioritize non-dirty pages, however if all pages are dirty, this conditions chooses first one to evict and write to disk.
-         if (bf->num_fixed == 0) {
+         if (bf->num_fixed == 0 && !bf->is_evicted) {
             evicted_page_id = *it;
-            pos = it;
          }
       }
 
-      // what if we don't have an unfixed one?  -> buffer_manager_full_error is thrown earlier.
-      this->lru_queue.erase(pos);
-      this->lru_set.erase(evicted_page_id);
-   }
+   // std::cout << "evict!! " << evicted_page_id <<std::endl;
 
    //  Update Hashtable
    auto ito = this->hashtable.find(evicted_page_id);
    if (ito != this->hashtable.end()) {
       std::shared_ptr<BufferFrame> bf_to_be_deleted = ito->second;
-      this->hashtable.erase(ito);
+      bf_to_be_deleted->is_evicted = true;
       // If page is dirty, write it to disk:
       if (bf_to_be_deleted->is_dirty) {
          // We unlock directory (buffer_manager_mutex) here to avoid holding the lock during an expensive operation (Writing to disk)
@@ -122,11 +109,37 @@ void BufferManager::evict_page() {
          std::atomic_ref<int> state_atomic(state_ref);
          state_atomic.store(static_cast<int>(bf_to_be_deleted->custom_latch.state.load()));
          // Write the Buffer Frame to disk
-         write_buffer_frame_to_file(pageNo, data);
+         auto segment_id = get_segment_id(pageNo);
+         std::unique_ptr<File> file = File::open_file((std::to_string(segment_id) + ".txt").c_str(), File::Mode::WRITE);
+         size_t file_offset = get_segment_page_id(pageNo) * page_size;
+         file->resize(file->size() + this->page_size);
+         // File size is the offset of the new page
+         file->write_block(data, file_offset, this->page_size);
+
+         // write_buffer_frame_to_file(pageNo, data);
          bf_to_be_deleted->custom_latch.unlock_exclusive();
          // bf_to_be_deleted->latch.unlock();
          buffer_manager_mutex.lock();
       }
+
+      if(bf_to_be_deleted->num_fixed == 0) {
+         auto pos_fifo = std::find(fifo_queue.begin(), fifo_queue.end(), evicted_page_id);
+         auto pos_lru = std::find(lru_queue.begin(), lru_queue.end(), evicted_page_id);
+
+         if (pos_fifo != fifo_queue.end()) {
+            // Page is still in FIFO queue
+            fifo_queue.erase(pos_fifo);
+            fifo_set.erase(evicted_page_id);
+         } else if (pos_lru != lru_queue.end()) {
+            // Page is in LRU queue
+            lru_queue.erase(pos_lru);
+            lru_set.erase(evicted_page_id);
+         }
+
+         // Finally, remove from hashtable
+         hashtable.erase(evicted_page_id);
+      }
+
    }
 }
 
@@ -206,6 +219,8 @@ std::shared_ptr<BufferFrame> BufferManager::fix_page(uint64_t page_id, bool excl
 
    std::shared_ptr<BufferFrame> buffer_frame = this->find_buffer_frame_by_page_id(page_id);
    if (buffer_frame != nullptr) {
+      buffer_frame->num_fixed += 1;
+      buffer_frame->is_evicted = false;
       bf_lock.unlock();
       if (exclusive) {
          buffer_frame->custom_latch.lock_exclusive();
@@ -214,7 +229,7 @@ std::shared_ptr<BufferFrame> BufferManager::fix_page(uint64_t page_id, bool excl
          buffer_frame->custom_latch.lock_shared();
          buffer_frame->is_exclusive = false;
       }
-      buffer_frame->num_fixed += 1;
+
       return buffer_frame;
    }
 
@@ -224,7 +239,9 @@ std::shared_ptr<BufferFrame> BufferManager::fix_page(uint64_t page_id, bool excl
    hashtable.insert({page_id, new_frame});
    new_frame->num_fixed = 1;
    new_frame->data = std::make_unique<char[]>(this->page_size);
-
+   new_frame->pageNo = page_id;
+   new_frame->is_dirty = false;
+   new_frame->is_evicted = false;
    bf_lock.unlock();
    if (exclusive) {
       new_frame->custom_latch.lock_exclusive();
@@ -233,8 +250,7 @@ std::shared_ptr<BufferFrame> BufferManager::fix_page(uint64_t page_id, bool excl
       new_frame->custom_latch.lock_shared();
       new_frame->is_exclusive = false;
    }
-   new_frame->pageNo = page_id;
-   new_frame->is_dirty = false;
+
    // load page from disk if it is not in memory(NOT in Hashtable). Use segment id to read from disk & update data field in the BufferFrame
    read_buffer_frame_from_file(page_id, *new_frame);
 

@@ -1,14 +1,13 @@
 #ifndef INCLUDE_MODERNDBS_SEGMENT_H_
 #define INCLUDE_MODERNDBS_SEGMENT_H_
 
+#include "file.h"
 #include "moderndbs/buffer_manager.h"
 #include "moderndbs/schema.h"
 #include "moderndbs/slotted_page.h"
 #include "transaction_manager.h"
-#include <array>
 #include <cmath>
 #include <optional>
-#include <math.h>
 
 namespace moderndbs {
 struct OrderRecord;
@@ -181,6 +180,15 @@ class WALSegment : public Segment {
 
    explicit WALSegment(uint16_t segment_id, BufferManager &buffer_manager);
 
+   ~WALSegment() {
+      // Signal the background thread to stop and wait for it to join
+      stop_background_flush = true;
+      flushWal();
+      if (flush_thread.joinable()) {
+         flush_thread.join();
+      }
+   }
+
    /// Returns the LSN of this record
    uint64_t appendRecord(uint64_t transaction_id, TransactionState state, OrderRecord* old_rec, OrderRecord* new_rec);
 
@@ -192,13 +200,13 @@ class WALSegment : public Segment {
    /// Appends to the End of WAL File
    void append_to_WAL_Segment(const char* data, size_t data_size);
 
-   std::pair<char*, size_t> serialize();
+   std::pair<char*, size_t> serialize(std::vector<LogRecord> recs);
 
    /// Timer function that wakes up every x seconds to flush WAL to disk.
-   void runEveryXSeconds(uint64_t seconds, std::atomic<bool>& running) {
-      while (running) {
-         std::this_thread::sleep_for(std::chrono::seconds(seconds));
-         if (running) {
+   void runEveryXSeconds(uint64_t milliseconds, std::atomic<bool>& stop_sig) {
+      while (!stop_sig) {
+         std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
+         if (!stop_sig) {
             flushWal();
          }
       }
@@ -207,13 +215,18 @@ class WALSegment : public Segment {
    /// Vector storing LogRecords that are not flushed to disk.
    std::vector<LogRecord> records;
    /// Log Sequence Number
-   uint64_t LSN{};
+   std::atomic<uint64_t> LSN{0};
    /// WAL latch
    std::shared_mutex wal_mutex;
    /// Last LSN in log on disk
-   uint64_t flushedLSN{};
+   std::atomic<uint64_t> flushedLSN{0};
    /// Last Transaction Number in log on disk
-   uint64_t latest_txn_no;
+   std::atomic<uint64_t> latest_txn_no{0};
+   /// WAL file
+   std::unique_ptr<File> wal_file;
+   std::atomic<bool> stop_background_flush;
+   std::thread flush_thread;
+   uint64_t flush_interval_ms = 100;
 };
 
 } // namespace moderndbs
