@@ -322,14 +322,14 @@ int main() {
     // Create the errorListener thread before joining the other threads
     auto db = moderndbs::Database();
 
-    std::thread errorListener([&db]() { listenForErrors(db); });
-
-    {
-        std::unique_lock<std::mutex> lk(cv_m);
-        cv.wait(lk, [] { return is_server_ready; });
-    }
-
-    std::cout << "Error listener is ready, now starting worker threads...\n";
+    // std::thread errorListener([&db]() { listenForErrors(db); });
+    //
+    // {
+    //     std::unique_lock<std::mutex> lk(cv_m);
+    //     cv.wait(lk, [] { return is_server_ready; });
+    // }
+    //
+    // std::cout << "Error listener is ready, now starting worker threads...\n";
 
     {
         moderndbs::FileMapper schema_file_mapper("/tmp/transfuse_mnt/schema_segment.txt", (sysconf(_SC_PAGESIZE)));
@@ -341,8 +341,8 @@ int main() {
     db.load_schema(49);
     auto &table = db.get_schema().tables[0];
 
-    /// INSERTIONS -> INSERT OrderRecords for 20 pages.
-    for (uint64_t i = 0; i < 409600; ++i) {
+    /// INSERTIONS -> INSERT OrderRecords for 1280 pages. (5MB)
+    for (uint64_t i = 0; i < 102400; ++i) {
         moderndbs::OrderRecord order = {i, i * 2, i * 100, i % 5, (i % 2 == 0 ? 'G' : 'H')};
         auto transactionID = db.transaction_manager.startTransaction();
         db.insert(table, order, transactionID);
@@ -362,15 +362,15 @@ int main() {
             // Number of pages accessed by a point query is geometrically distributed.
             std::geometric_distribution<size_t> num_pages_distr{0.5};
             // 60% of point queries are reads.
-            std::bernoulli_distribution reads_distr{0.5};
-            std::cout << " READS: " << 0.5 << "\n";
+            std::bernoulli_distribution reads_distr{0.9};
+            std::cout << " READS: " << 0.9 << "\n";
 
             // Pages and Slots
             // Out of 20 accesses, 10 are from page 0, 4 from page 1, 2 from page 2, 1 from page 3, and 3 from page 4.
-            std::uniform_int_distribution<uint16_t> page_distr{0, 19};
+            std::uniform_int_distribution<uint16_t> page_distr{0, 1280};
             std::uniform_int_distribution<uint16_t> slot_distr{0, 79};
 
-            for (size_t j = 0; j < 800; ++j) {
+            for (size_t j = 0; j < 10000; ++j) {
                 // if (scan_distr(engine)) {
                 //     /// READ two full segments
                 //     auto start_page = page_distr(engine);
@@ -418,8 +418,8 @@ int main() {
     }
 
     std::cout << "FINITO\n";
-    errorListener.join();
-    std::cout << "Error listener terminated. Exiting...\n";
+    // errorListener.join();
+    // std::cout << "Error listener terminated. Exiting...\n";
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);

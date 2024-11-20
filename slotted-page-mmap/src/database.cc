@@ -22,7 +22,7 @@ void moderndbs::Database::update_tuple(const schema::Table& table, const TID tid
    auto order_size = sizeof(OrderRecord);
    // Write the data to the segment
    sp.write(tid, data, order_size,  lsn, true);
-   std::cout << "Tuple with TID " << tid.get_value() << " updated!\n";
+   // std::cout << "Tuple with TID " << tid.get_value() << " updated!\n";
 }
 
 void moderndbs::Database::load_new_schema(std::unique_ptr<schema::Schema> schema) {
@@ -56,7 +56,7 @@ std::optional<moderndbs::OrderRecord> moderndbs::Database::read_tuple(const sche
    OrderRecord record;
    auto order_size = sizeof(OrderRecord);
    memcpy(&record, read_buffer.data(), order_size);
-   std::cout << "Reading Tuple with TID " << tid.get_value() << " !\n";
+   // std::cout << "Reading Tuple with TID " << tid.get_value() << " !\n";
 
    return record;
 }

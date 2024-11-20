@@ -13,7 +13,7 @@ uint64_t WALSegment::nextLSN() {
 }
 
 WALSegment::WALSegment(FileMapper &file_mapper)
-        : Segment(101, file_mapper){
+        : Segment(101, file_mapper), stop_background_flush(false) {
    std::unique_lock lock(wal_mutex);
    std::shared_ptr<Page> page = file_mapper.get_page(0, false);
    auto &latest_flushed_LSN = *reinterpret_cast<uint64_t *>(page->get_data());

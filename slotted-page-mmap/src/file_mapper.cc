@@ -55,32 +55,15 @@ namespace moderndbs {
         page_ptr->set_readers_count(page_ptr->custom_latch.readers_count.load());
         page_ptr->set_state(static_cast<int>(page_ptr->custom_latch.state.load()));
 
-        // if (msync(mmap_ptr_ + pos, page_size_, MS_SYNC) == -1) {
-        //    perror("msync");
-        //    munmap(mmap_ptr_, file_size_);
-        // }
-        //
+        if (mlock(mapped_data, page_size_) != 0) {
+            perror("mlock");
+        }
+
         // if (madvise(mmap_ptr_ + pos, page_size_, MADV_DONTNEED) == -1) {
         //    perror("madvise");
         // }
         //
-        // unsigned char *vec = static_cast<unsigned char *>(calloc(2, sizeof(unsigned char)));
-        // if (!vec) {
-        //    perror("calloc");
-        //    munmap(mmap_ptr_, file_size_);
-        // }
-        //
-        // if (mincore(mmap_ptr_ + pos, page_size_, vec) != 0) {
-        //    perror("mincore");
-        //    free(vec);
-        //    munmap(mmap_ptr_, file_size_);
-        // }
-        //
-        // for (size_t i = 0; i < 2; i++) {
-        //    printf("Page %zu: %s\n", i, (vec[i] & 1) ? "Resident" : "Not resident");
-        // }
-        //
-        // free(vec);
+
 
         return page_ptr;
     }
@@ -154,6 +137,10 @@ namespace moderndbs {
         }
         page->set_readers_count(page->custom_latch.readers_count.load());
         page->set_state(static_cast<int>(page->custom_latch.state.load()));
+
+        if (munlock(page->get_data_with_header(),page_size_) != 0) {
+            perror("munlock");
+        }
     }
 
     uint64_t FileMapper::calculate_file_size(const uint64_t oldFileSize) const {
