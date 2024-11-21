@@ -17,6 +17,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <list>
 
 namespace moderndbs {
 
@@ -67,12 +68,16 @@ class BufferManager {
    // hashtable of buffer frames
    std::unordered_map<uint64_t, std::shared_ptr<BufferFrame>> hashtable;
    // FIFO queue -> Double-ended queue to erase elements because it is not possible to remove element form middle of queue
-   std::vector<uint64_t> fifo_queue;
-   std::set<uint64_t> fifo_set;
+//   std::vector<uint64_t> fifo_queue;
+//   std::set<uint64_t> fifo_set;
+    std::unordered_map<uint64_t, std::list<uint64_t>::iterator> fifo_map;
+    std::list<uint64_t> fifo_list;
 
    // LRU queue
-   std::vector<uint64_t> lru_queue;
-   std::set<uint64_t> lru_set;
+//   std::vector<uint64_t> lru_queue;
+//   std::set<uint64_t> lru_set;
+    std::unordered_map<uint64_t, std::list<uint64_t>::iterator> lru_map;
+    std::list<uint64_t> lru_list;
 
    // number of fixed pages
    std::atomic<size_t> num_fixed_pages;

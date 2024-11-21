@@ -252,14 +252,14 @@ uint32_t FSISegment::decode_free_space(uint8_t free_space) {
 
 
 std::optional<uint64_t> FSISegment::find(uint32_t required_space) {
-    const size_t entries_per_page = (buffer_manager.get_page_size() - sizeof(uint64_t)) * 2; // 2 entries per byte
+    const uint64_t entries_per_page = (buffer_manager.get_page_size() - sizeof(uint64_t)) * 2; // 2 entries per byte
 
     // 1. Check the cached `last_page_with_space`
     if (last_page_with_space) {
         uint64_t cached_page_id = *last_page_with_space;
         uint64_t cached_fsi_page_id = cached_page_id / entries_per_page;
-        size_t target_entry_index = cached_page_id % entries_per_page;
-        size_t byte_index = target_entry_index / 2;
+        uint64_t  target_entry_index = cached_page_id % entries_per_page;
+        uint64_t  byte_index = target_entry_index / 2;
         bool is_upper_nibble = (target_entry_index % 2 == 0);
 
         // Fix the FSI page containing the cached entry
