@@ -10,7 +10,7 @@ moderndbs::TID moderndbs::Database::insert(const schema::Table &table, OrderReco
    auto tid = sp.allocate(order_size);
    // Write the data to the segment
    sp.write(tid, data, order_size, lsn);
-   std::cout << "Tuple with TID " << tid.get_value() << " Page " << tid.get_page_id(0) << "  SLOT  " << tid.get_slot() << " inserted!\n";
+   // std::cout << "Tuple with TID " << tid.get_value() << " Page " << tid.get_page_id(0) << "  SLOT  " << tid.get_slot() << " inserted!\n";
    return tid;
 }
 
@@ -24,7 +24,7 @@ void moderndbs::Database::update_tuple(const schema::Table &table, const TID tid
    auto order_size = sizeof(OrderRecord);
    // Write the data to the segment
    sp.write(tid, data, order_size, lsn, true);
-   std::cout << "Tuple with TID " << tid.get_value() << " updated!\n";
+   // std::cout << "Tuple with TID " << tid.get_value() << " updated!\n";
 }
 
 
@@ -72,7 +72,7 @@ void moderndbs::Database::delete_tuple(const schema::Table &table, const TID tid
    const uint64_t lsn = wal_segment->appendRecord(transactionId, TransactionState::RUNNING, &rec.value(), nullptr);
     SPSegment &sp = *slotted_pages.at(table.sp_segment);
     sp.erase(tid, lsn);
-    std::cout << "Tuple with TID " << tid.get_value() << " deleted!\n";
+    // std::cout << "Tuple with TID " << tid.get_value() << " deleted!\n";
 }
 
 

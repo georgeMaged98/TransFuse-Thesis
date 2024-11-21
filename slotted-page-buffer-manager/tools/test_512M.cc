@@ -48,9 +48,6 @@ void initialize_schema() {
 void initialize_DB(moderndbs::Database &db, const uint64_t records_count) {
    auto& table = db.get_schema().tables[0];
    for (uint64_t i = 0; i < records_count; ++i) {
-      if(i == 652640) {
-         cout<<"Record #"<<i+1<<": ";
-      }
       moderndbs::OrderRecord order = {i, i * 2, i * 100, i % 5, (i % 2 == 0 ? 'G' : 'H')};
       auto transactionID = db.transaction_manager.startTransaction();
       db.insert(table, order, transactionID);

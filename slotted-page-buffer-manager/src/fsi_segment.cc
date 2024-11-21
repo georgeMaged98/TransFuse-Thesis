@@ -253,7 +253,6 @@ uint32_t FSISegment::decode_free_space(uint8_t free_space) {
 
 std::optional<uint64_t> FSISegment::find(uint32_t required_space) {
     const size_t entries_per_page = (buffer_manager.get_page_size() - sizeof(uint64_t)) * 2; // 2 entries per byte
-    size_t page_data_capacity = buffer_manager.get_page_size() - sizeof(uint64_t);
 
     // 1. Check the cached `last_page_with_space`
     if (last_page_with_space) {
@@ -284,8 +283,8 @@ std::optional<uint64_t> FSISegment::find(uint32_t required_space) {
     }
 
     // 2. Fallback to scanning all pages
-    uint64_t current_page_id = 0;
-   uint64_t total_entries = 0;
+   uint64_t current_page_id = 0;
+   uint64_t fsi_total_entries = 0;
 
     while (true) {
         // Fix the current FSI page in read mode
@@ -293,15 +292,14 @@ std::optional<uint64_t> FSISegment::find(uint32_t required_space) {
         auto *page_data = page->get_data();
 
        if(current_page_id == 0) {
-          total_entries = *reinterpret_cast<uint64_t *>(page_data);
+          fsi_total_entries = *reinterpret_cast<uint64_t *>(page_data);
        }
         // Determine the starting offset for FSI data
         size_t header_offset = (current_page_id == 0) ? sizeof(uint64_t) : 0;
-        // size_t entries_in_this_page = std::min(entries_per_page, total_entries - (current_page_id * entries_per_page));
-       size_t bytes_in_this_page = buffer_manager.get_page_size() - header_offset;
+        size_t entries_in_this_page = std::min(entries_per_page, fsi_total_entries - (current_page_id * entries_per_page));
 
         // Iterate over the entries in this page
-        for (size_t i = 0; i < bytes_in_this_page / 2; i++) {
+        for (size_t i = 0; i < entries_in_this_page / 2; i++) {
             uint8_t current_byte = reinterpret_cast<uint8_t *>(page_data + header_offset)[i];
 
             // Check the high nibble (4 bits)
@@ -330,7 +328,7 @@ std::optional<uint64_t> FSISegment::find(uint32_t required_space) {
         current_page_id++;
 
         // Break if we've processed all entries
-        if ((current_page_id * entries_per_page) >= total_entries) {
+        if ((current_page_id * entries_per_page) >= fsi_total_entries) {
             break;
         }
     }
