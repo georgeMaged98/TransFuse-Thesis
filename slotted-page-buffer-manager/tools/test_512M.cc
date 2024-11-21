@@ -77,9 +77,9 @@ void scan_DB(moderndbs::Database &db, const uint64_t start_page, const uint64_t 
 
 int main() {
     cout << "Testing 512M" << endl;
-    uint64_t num_records = 13421772;
+    uint64_t num_records = 10485760;
     auto db = moderndbs::Database(262144, wal_name);
-    initialize_schema();
+    // initialize_schema();
     db.load_schema(schema_name);
     // auto& table = db.get_schema().tables[0];
     // moderndbs::BufferManager buffer_manager(4096, 1000);
@@ -96,7 +96,7 @@ int main() {
     // auto transactionID = db.transaction_manager.startTransaction();
     // db.insert(table, order, transactionID);
     // db.transaction_manager.commitTransaction(transactionID);
-    initialize_DB(db, num_records);
-    // scan_DB(db, 0, 2);
+    // initialize_DB(db, num_records);
+    scan_DB(db, 0, 2);
     return 0;
 }
