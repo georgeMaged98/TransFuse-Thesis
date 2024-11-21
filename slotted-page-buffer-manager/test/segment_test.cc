@@ -206,7 +206,7 @@ TEST_F(SegmentTest, FSIFind) {
 
 // NOLINTNEXTLINE
 TEST_F(SegmentTest, FSIPersistence) {
-   BufferManager buffer_manager(sysconf (_SC_PAGESIZE), 10);
+   BufferManager buffer_manager(1024, 10);
    SchemaSegment schema_segment(0, buffer_manager);
    schema_segment.set_schema(getTPCHSchemaLight());
    auto& table = schema_segment.get_schema()->tables[0];

@@ -110,6 +110,9 @@ class Segment {
         std::vector<uint8_t> fsi_bitmap;
        /// latch
        std::shared_mutex fsi_mutex;
+       // Caches the last page with available space
+       std::optional<uint64_t> last_page_with_space;
+
     };
 
     class SPSegment : public moderndbs::Segment {
