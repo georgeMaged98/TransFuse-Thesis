@@ -6,7 +6,7 @@
 # Sources
 # ---------------------------------------------------------------------------
 
-set(TOOLS_SRC tools/database_wrapper.cc)
+set(TOOLS_SRC tools/database_wrapper.cc tools/test_512M.cc)
 
 # ---------------------------------------------------------------------------
 # Executables
@@ -14,6 +14,10 @@ set(TOOLS_SRC tools/database_wrapper.cc)
 
 add_executable(database_wrapper tools/database_wrapper.cc)
 target_link_libraries(database_wrapper moderndbs Threads::Threads)
+
+
+add_executable(test512M tools/test_512M.cc)
+target_link_libraries(test512M moderndbs Threads::Threads)
 
 # ---------------------------------------------------------------------------
 # Linting

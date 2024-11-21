@@ -8,6 +8,9 @@
 #include "transaction_manager.h"
 #include <cmath>
 #include <optional>
+#include <fstream>
+#include <cstring>
+
 
 namespace moderndbs {
 struct OrderRecord;

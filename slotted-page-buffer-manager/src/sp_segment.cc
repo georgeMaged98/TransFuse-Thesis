@@ -1,8 +1,6 @@
 #include "moderndbs/segment.h"
 #include "moderndbs/slotted_page.h"
 
-#include <cstring>
-
 using moderndbs::Segment;
 using moderndbs::SPSegment;
 using moderndbs::TID;
@@ -11,6 +9,14 @@ SPSegment::SPSegment(uint16_t segment_id, BufferManager& buffer_manager, SchemaS
                      schema::Table& table)
    : Segment(segment_id, buffer_manager), schema(schema), fsi(fsi), table(table) {
    // TODO: add your implementation here
+   std::string filename = std::to_string(segment_id) + ".txt";
+   // Check if the file exists
+   std::ifstream infile(filename);
+   if (!infile.good()) {
+      std::cerr << "File not found. Creating file: " << filename << std::endl;
+      std::ofstream outfile(filename); // Creates the file
+      outfile.close();
+   }
 }
 
 TID SPSegment::allocate(uint32_t size) {

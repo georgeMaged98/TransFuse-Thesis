@@ -270,7 +270,7 @@ TEST_F(SegmentTest, SPRecordWriteRead) {
       auto tid = sp_segment.allocate(size);
       tids.push_back(tid);
       std::memset(writeBuffer.data(), size, size);
-      sp_segment.write(tid, writeBuffer.data(), size);
+      sp_segment.write(tid, writeBuffer.data(), size, 1, false);
       sp_segment.read(tid, readBuffer.data(), size);
       ASSERT_EQ(std::memcmp(writeBuffer.data(), readBuffer.data(), size), 0);
    }
@@ -550,4 +550,4 @@ TEST_F(SegmentTest, SPRecordWriteRead) {
 // //   }
 // //}
 //
-// } // namespace
+} // namespace

@@ -20,7 +20,7 @@ struct OrderRecord {
 class Database {
    public:
    /// Constructor.
-   Database() : buffer_manager(sysconf(_SC_PAGESIZE), 1000), wal_segment(std::make_unique<WALSegment>(55, buffer_manager)),
+   Database(uint64_t buffer_manager_size, uint64_t wal_segment_id) : buffer_manager(sysconf(_SC_PAGESIZE), buffer_manager_size), wal_segment(std::make_unique<WALSegment>(wal_segment_id, buffer_manager)),
                 transaction_manager(*wal_segment) {}
 
    /// Load a new schema

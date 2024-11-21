@@ -44,7 +44,7 @@ void BufferManager::read_buffer_frame_from_file(uint64_t page_id, BufferFrame& b
 
       file->read_block(page_offset_in_file, this->page_size, bf.get_data_with_locks());
    } catch (const std::exception& e) {
-      std::cout << "File Not Found!! \n";
+      std::cerr << "Error: " << e.what() << "\n";
    }
 }
 
@@ -68,22 +68,23 @@ void BufferManager::evict_page() {
          break;
       }
    }
-  for (auto it = this->lru_queue.begin(); it != this->lru_queue.end(); ++it) {
-         auto bf_it = this->hashtable.find(*it);
-         if (bf_it == hashtable.end()) {
-            continue; // Skip if page is not found in hashtable
-         }
 
-         const auto bf = bf_it->second;
-         if (bf->num_fixed == 0 && !bf->is_dirty && !bf->is_evicted) {
-            evicted_page_id = *it;
-            break;
-         }
-         // Above condition is to prioritize non-dirty pages, however if all pages are dirty, this conditions chooses first one to evict and write to disk.
-         if (bf->num_fixed == 0 && !bf->is_evicted) {
-            evicted_page_id = *it;
-         }
+   for (auto it = this->lru_queue.begin(); it != this->lru_queue.end(); ++it) {
+      auto bf_it = this->hashtable.find(*it);
+      if (bf_it == hashtable.end()) {
+         continue; // Skip if page is not found in hashtable
       }
+
+      const auto bf = bf_it->second;
+      if (bf->num_fixed == 0 && !bf->is_dirty && !bf->is_evicted) {
+         evicted_page_id = *it;
+         break;
+      }
+      // Above condition is to prioritize non-dirty pages, however if all pages are dirty, this conditions chooses first one to evict and write to disk.
+      if (bf->num_fixed == 0 && !bf->is_evicted) {
+         evicted_page_id = *it;
+      }
+   }
 
    // std::cout << "evict!! " << evicted_page_id <<std::endl;
 
@@ -122,7 +123,7 @@ void BufferManager::evict_page() {
          buffer_manager_mutex.lock();
       }
 
-      if(bf_to_be_deleted->num_fixed == 0) {
+      if (bf_to_be_deleted->num_fixed == 0) {
          auto pos_fifo = std::find(fifo_queue.begin(), fifo_queue.end(), evicted_page_id);
          auto pos_lru = std::find(lru_queue.begin(), lru_queue.end(), evicted_page_id);
 
@@ -139,7 +140,6 @@ void BufferManager::evict_page() {
          // Finally, remove from hashtable
          hashtable.erase(evicted_page_id);
       }
-
    }
 }
 

@@ -5,6 +5,7 @@
 #include "moderndbs/segment.h"
 
 #include <cstring>
+#include <fstream>
 #include <moderndbs/database.h>
 
 using WALSegment = moderndbs::WALSegment;
@@ -18,24 +19,44 @@ WALSegment::WALSegment(uint16_t segment_id, BufferManager& buffer_manager)
    : Segment(segment_id, buffer_manager), stop_background_flush(false) {
    std::unique_lock lock(wal_mutex);
 
-   std::unique_ptr<File> file = File::open_file((std::to_string(segment_id) + ".txt").c_str(), File::Mode::READ);
-   char latest_flushed_lsn_buffer[sizeof(uint64_t)];
-   file->read_block(0, sizeof(uint64_t), latest_flushed_lsn_buffer);
-   const auto& latest_flushed_LSN = *reinterpret_cast<uint64_t*>(latest_flushed_lsn_buffer);
-   LSN = latest_flushed_LSN;
-   flushedLSN = latest_flushed_LSN;
-   /// Initialize txn_no with 0 unless it is initalized from WAL file, it will be modified inside the condition.
-   latest_txn_no = 0;
-   if (flushedLSN > 0) {
-      /// sizeof(uint64_t) -> LSN COUNT
-      auto wal_rec_size = sizeof(LogRecord);
-      char last_record_buffer[wal_rec_size];
-      size_t file_offset = sizeof(uint64_t) + (latest_flushed_LSN - 1) * sizeof(LogRecord);
-      file->read_block(file_offset, wal_rec_size, last_record_buffer);
-      LogRecord record;
-      memcpy(&record, last_record_buffer, wal_rec_size);
-      latest_txn_no = record.transactionId;
+   std::string filename = std::to_string(segment_id) + ".txt";
+   bool is_new = false;
+   std::ifstream infile(filename);
+   if (!infile.good()) {
+      std::cerr << "File not found. Creating file: " << filename << std::endl;
+      std::ofstream outfile(filename); // Creates the file
+      outfile.close();
+      is_new = true;
    }
+
+   if (is_new) {
+      latest_txn_no = 0;
+      LSN = 0;
+      flushedLSN = 0;
+      std::unique_ptr<File> file = File::open_file(filename.c_str(), File::Mode::WRITE);
+      file->write_block(reinterpret_cast<const char*>(&LSN), 0, sizeof(uint64_t));
+   } else {
+      std::unique_ptr<File> file = File::open_file(filename.c_str(), File::Mode::READ);
+      char latest_flushed_lsn_buffer[sizeof(uint64_t)];
+      file->read_block(0, sizeof(uint64_t), latest_flushed_lsn_buffer);
+      const auto& latest_flushed_LSN = *reinterpret_cast<uint64_t*>(latest_flushed_lsn_buffer);
+      LSN = latest_flushed_LSN;
+      flushedLSN = latest_flushed_LSN;
+      if (LSN > 0) {
+         /// sizeof(uint64_t) -> LSN COUNT
+         auto wal_rec_size = sizeof(LogRecord);
+         char last_record_buffer[wal_rec_size];
+         size_t file_offset = sizeof(uint64_t) + (latest_flushed_LSN - 1) * sizeof(LogRecord);
+         file->read_block(file_offset, wal_rec_size, last_record_buffer);
+         LogRecord record;
+         memcpy(&record, last_record_buffer, wal_rec_size);
+         latest_txn_no = record.transactionId;
+      } else {
+         /// Initialize txn_no with 0 unless it is initalized from WAL file, it will be modified inside the condition.
+         latest_txn_no = 0;
+      }
+   }
+
    flush_thread = std::thread(&WALSegment::runEveryXSeconds, this, flush_interval_ms, std::ref(stop_background_flush));
 }
 
@@ -86,7 +107,7 @@ void WALSegment::flushWal() {
       delete[] walData.first;
       {
          std::unique_lock lock(wal_mutex);
-         flushedLSN.store(currentLSN);  // Ensure flushed LSN is in sync with the latest LSN
+         flushedLSN.store(currentLSN); // Ensure flushed LSN is in sync with the latest LSN
          // std::cout << "Flushed LSN " << flushedLSN.load() << "\n";
       }
    }
