@@ -1,8 +1,9 @@
 #include "moderndbs/segment.h"
 #include <cstring>
-
+#include <algorithm>
 
 using FSISegment = moderndbs::FSISegment;
+using namespace std;
 
 FSISegment::FSISegment(uint16_t segment_id, BufferManager &buffer_manager, schema::Table &table)
         : Segment(segment_id, buffer_manager), table(table) {
@@ -43,7 +44,7 @@ void FSISegment::update(uint64_t target_page, uint32_t free_space) {
    }
    // Calculate the target page and offset
    const size_t entries_per_page = (buffer_manager.get_page_size() - sizeof(uint64_t)) * 2; // 2 pages per byte (4 bits per page)
-   size_t page_data_capacity = buffer_manager.get_page_size() - sizeof(uint64_t);
+   uint64_t page_data_capacity = buffer_manager.get_page_size() - sizeof(uint64_t);
    const size_t fsi_target_page_number = target_page_id / entries_per_page;
    const size_t target_entry_index = target_page_id % entries_per_page;
    const size_t byte_index = target_entry_index / 2;
@@ -83,7 +84,7 @@ void FSISegment::update(uint64_t target_page, uint32_t free_space) {
    buffer_manager.unfix_page(page0,true);
 
    // Write overflow bitmap data to additional pages
-   size_t remaining_bytes = fsi_bitmap_size - bytes_to_write;
+    uint64_t remaining_bytes = fsi_bitmap_size - bytes_to_write;
    uint64_t current_page_id = 1;
 
    while (remaining_bytes > 0) {

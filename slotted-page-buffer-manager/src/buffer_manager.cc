@@ -102,13 +102,14 @@ void BufferManager::evict_page() {
          const auto data = bf_to_be_deleted->get_data_with_locks();
          // Write the readers_count and state to the first bytes of data using atomic_ref
          int& readers_count_ref = *reinterpret_cast<int*>(data);
-         std::atomic_ref<int> readers_count_atomic(readers_count_ref);
-         readers_count_atomic.store(bf_to_be_deleted->custom_latch.readers_count.load());
+         std::atomic<int> readers_count_atomic(readers_count_ref);
+         readers_count_atomic.store(static_cast<int>(bf_to_be_deleted->custom_latch.readers_count.load()));
 
          // Store state in the next bytes of the data buffer using atomic_ref
          int& state_ref = *reinterpret_cast<int*>(data + sizeof(int));
-         std::atomic_ref<int> state_atomic(state_ref);
+         std::atomic<int> state_atomic(state_ref);
          state_atomic.store(static_cast<int>(bf_to_be_deleted->custom_latch.state.load()));
+
          // Write the Buffer Frame to disk
          auto segment_id = get_segment_id(pageNo);
          std::unique_ptr<File> file = File::open_file((std::to_string(segment_id) + ".txt").c_str(), File::Mode::WRITE);
@@ -169,14 +170,15 @@ BufferManager::~BufferManager() {
          const auto pageNo = i.second->pageNo;
          const auto data = i.second->get_data_with_locks();
          // Write the readers_count and state to the first bytes of data using atomic_ref
-         int& readers_count_ref = *reinterpret_cast<int*>(data);
-         std::atomic_ref<int> readers_count_atomic(readers_count_ref);
-         readers_count_atomic.store(i.second->custom_latch.readers_count.load());
+          // Write the readers_count and state to the first bytes of data using atomic_ref
+          int& readers_count_ref = *reinterpret_cast<int*>(data);
+          std::atomic<int> readers_count_atomic(readers_count_ref);
+          readers_count_atomic.store(static_cast<int>(i.second->custom_latch.readers_count.load()));
 
-         // Store state in the next bytes of the data buffer using atomic_ref
-         int& state_ref = *reinterpret_cast<int*>(data + sizeof(int));
-         std::atomic_ref<int> state_atomic(state_ref);
-         state_atomic.store(static_cast<int>(i.second->custom_latch.state.load()));
+          // Store state in the next bytes of the data buffer using atomic_ref
+          int& state_ref = *reinterpret_cast<int*>(data + sizeof(int));
+          std::atomic<int> state_atomic(state_ref);
+          state_atomic.store(static_cast<int>(i.second->custom_latch.state.load()));
 
          write_buffer_frame_to_file(i.second->pageNo, i.second->get_data_with_locks());
       }
