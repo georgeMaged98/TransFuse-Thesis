@@ -34,10 +34,10 @@ PosixFile::PosixFile(Mode mode, int fd, size_t size) : mode(mode), fd(fd), cache
 PosixFile::PosixFile(const char* filename, Mode mode) : mode(mode) {
         switch (mode) {
             case READ:
-                fd = ::open(filename, O_RDONLY | O_SYNC | O_CLOEXEC);
+                fd = ::open(filename, O_RDONLY | O_SYNC | O_CLOEXEC | O_DIRECT);
                 break;
             case WRITE:
-                fd = ::open(filename, O_RDWR | O_CREAT | O_SYNC | O_CLOEXEC, 0666);
+                fd = ::open(filename, O_RDWR | O_CREAT | O_SYNC | O_CLOEXEC | O_DIRECT, 0666);
         }
         if (fd < 0) {
             throw_errno();
