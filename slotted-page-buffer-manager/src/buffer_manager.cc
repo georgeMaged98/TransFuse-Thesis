@@ -20,38 +20,85 @@ std::shared_ptr<BufferFrame> BufferManager::find_buffer_frame_by_page_id(uint64_
    return output_it->second;
 }
 
+// void BufferManager::write_buffer_frame_to_file(uint64_t pageNo, char* data) const {
+//    auto segment_id = get_segment_id(pageNo);
+//    try {
+//       std::unique_ptr<File> file = File::open_file((std::to_string(segment_id) + ".txt").c_str(),
+//                                                    File::Mode::WRITE);
+//       size_t file_offset = get_segment_page_id(pageNo) * page_size;
+//
+//       // Check if the offset exceeds the file size before resizing
+//       if (file_offset + this->page_size > file->size()) {
+//          file->resize(file_offset + this->page_size);
+//       }
+//
+//       // File size is the offset of the new page
+//       file->write_block(data, file_offset, this->page_size);
+//       // Create an unordered map to save the offset of each page.
+//       // We know segment id from the function, so we only need to save the offset.
+//    } catch (const std::exception& e) {
+//       std::cout << "File Not Found!! \n";
+//    }
+// }
+
 void BufferManager::write_buffer_frame_to_file(uint64_t pageNo, char* data) const {
    auto segment_id = get_segment_id(pageNo);
-   try {
-      std::unique_ptr<File> file = File::open_file((std::to_string(segment_id) + ".txt").c_str(),
-                                                   File::Mode::WRITE);
-      size_t file_offset = get_segment_page_id(pageNo) * page_size;
 
-      // Check if the offset exceeds the file size before resizing
-      if (file_offset + this->page_size > file->size()) {
-         file->resize(file_offset + this->page_size);
+   std::unique_ptr<File>& file = file_handles[segment_id]; // Direct access to file handle
+
+   {
+      // Lock the cache to ensure thread-safe access
+      std::lock_guard<std::mutex> lock(file_cache_mutex);
+
+      if (!file) {
+         // File is not open; open it now in WRITE mode
+         std::string file_name = std::to_string(segment_id) + ".txt";
+         file = File::open_file(file_name.c_str(), File::Mode::WRITE);
       }
-
-      // File size is the offset of the new page
-      file->write_block(data, file_offset, this->page_size);
-      // Create an unordered map to save the offset of each page.
-      // We know segment id from the function, so we only need to save the offset.
-   } catch (const std::exception& e) {
-      std::cout << "File Not Found!! \n";
    }
+
+   size_t file_offset = get_segment_page_id(pageNo) * page_size;
+
+   // Check if the offset exceeds the file size before resizing
+   if (file_offset + this->page_size > file->size()) {
+      file->resize(file_offset + this->page_size);
+   }
+
+   // Write the data to the file at the calculated offset
+   file->write_block(data, file_offset, this->page_size);
 }
+
+// void BufferManager::read_buffer_frame_from_file(uint64_t page_id, BufferFrame& bf) const {
+//    auto segment_id = get_segment_id(page_id);
+//    try {
+//       std::unique_ptr<File> file = File::open_file((std::to_string(segment_id) + ".txt").c_str(),
+//                                                    File::Mode::READ);
+//       size_t page_offset_in_file = get_segment_page_id(page_id) * this->page_size;
+//
+//       file->read_block(page_offset_in_file, this->page_size, bf.get_data_with_locks());
+//    } catch (const std::exception& e) {
+//       std::cerr << "Error: " << e.what() << "\n";
+//    }
+// }
 
 void BufferManager::read_buffer_frame_from_file(uint64_t page_id, BufferFrame& bf) const {
    auto segment_id = get_segment_id(page_id);
-   try {
-      std::unique_ptr<File> file = File::open_file((std::to_string(segment_id) + ".txt").c_str(),
-                                                   File::Mode::READ);
-      size_t page_offset_in_file = get_segment_page_id(page_id) * this->page_size;
+   std::unique_ptr<File>& file = file_handles[segment_id]; // Direct access to file handle
 
-      file->read_block(page_offset_in_file, this->page_size, bf.get_data_with_locks());
-   } catch (const std::exception& e) {
-      std::cerr << "Error: " << e.what() << "\n";
+   {
+      // Lock the cache for thread-safe access
+      std::lock_guard<std::mutex> lock(file_cache_mutex);
+
+      if (!file) {
+         // File is not open; open it now
+         std::string file_name = std::to_string(segment_id) + ".txt";
+         file = File::open_file(file_name.c_str(), File::Mode::WRITE);
+      }
    }
+
+   // Perform the read operation
+   size_t page_offset_in_file = get_segment_page_id(page_id) * this->page_size;
+   file->read_block(page_offset_in_file, this->page_size, bf.get_data_with_locks());
 }
 
 void BufferManager::evict_page() {
@@ -188,68 +235,91 @@ BufferManager::~BufferManager() {
    // Process each segment
    for (auto& [segment_id, pages] : segment_pages) {
       try {
+         std::cout << " Writing Segment: " << segment_id << " Number of pages: " << pages.size() << std::endl;
          // Open the file for the segment
-         std::unique_ptr<File> file = File::open_file((std::to_string(segment_id) + ".txt").c_str(),
-                                                      File::Mode::WRITE);
+         std::unique_ptr<File> file = File::open_file((std::to_string(segment_id) + ".txt").c_str(), File::Mode::WRITE);
 
-         // Determine the required buffer size
-         size_t max_offset = 0;
-         for (const auto& [offset, data] : pages) {
-            max_offset = std::max(max_offset, offset + page_size);
+         // Sort dirty pages by offset to identify contiguous regions
+         ranges::sort(pages);
+
+         size_t batch_start = 0; // Start of the current batch
+         size_t batch_end = 0; // End of the current batch
+         std::vector<char> batch_buffer; // Temporary buffer for batched writes
+
+         size_t progress_threshold = std::max<size_t>(1, pages.size() / 10); // 10% threshold, at least 1 page
+         size_t next_progress = progress_threshold; // First progress checkpoint
+
+         for (size_t i = 0; i < pages.size(); ++i) {
+            size_t offset = pages[i].first;
+            char* data = pages[i].second;
+
+            if (batch_buffer.empty()) {
+               // Start a new batch
+               batch_start = offset;
+               batch_end = offset + page_size;
+               batch_buffer.resize(page_size);
+               std::memcpy(batch_buffer.data(), data, page_size);
+            } else if (offset == batch_end) {
+               // Extend the current batch
+               batch_buffer.resize(batch_buffer.size() + page_size);
+               std::memcpy(batch_buffer.data() + (batch_end - batch_start), data, page_size);
+               batch_end += page_size;
+            } else {
+               // Write the current batch to disk
+               file->write_block(batch_buffer.data(), batch_start, batch_buffer.size());
+
+               // Start a new batch
+               batch_start = offset;
+               batch_end = offset + page_size;
+               batch_buffer.clear();
+               batch_buffer.resize(page_size);
+               std::memcpy(batch_buffer.data(), data, page_size);
+            }
+
+            // Update progress
+            if (i + 1 >= next_progress) {
+               size_t percentage = (i + 1) * 100 / pages.size();
+               std::cout << "Segment " << segment_id << ": " << percentage << "% complete (" << (i + 1) << "/" << pages.size() << " pages)." << std::endl;
+               next_progress += progress_threshold; // Move to the next 10% checkpoint
+            }
+
          }
 
-         // Check and resize the file if necessary
-         if (max_offset > file->size()) {
-            file->resize(max_offset);
+         // Write the final batch
+         if (!batch_buffer.empty()) {
+            file->write_block(batch_buffer.data(), batch_start, batch_buffer.size());
          }
-
-         // Create a temporary buffer
-         std::vector<char> buffer(max_offset, 0);
-
-         // Copy each page into its position in the buffer
-         for (const auto& [offset, data] : pages) {
-            std::memcpy(buffer.data() + offset, data, page_size);
-         }
-
-         // Write the entire buffer to the file
-         file->write_block(buffer.data(), 0, buffer.size());
       } catch (const std::exception& e) {
          std::cerr << "Error writing segment " << segment_id << ": " << e.what() << std::endl;
       }
    }
-   // bool is_file_open = false;
-   // std::unique_ptr<File> file;
-   // // Writes all dirty pages to disk.
-   // for (auto& i : this->hashtable) {
-   //    // ADD IS_DIRTY check
-   //    if (i.second->is_dirty) {
-   //       if(!is_file_open) {
-   //          auto segment_id = get_segment_id(i.second->pageNo);
-   //          file = File::open_file((std::to_string(segment_id) + ".txt").c_str(),
-   //                                                       File::Mode::WRITE);
-   //          is_file_open = true;
-   //       }
-   //       const auto data = i.second->get_data_with_locks();
-   //       // Write the readers_count and state to the first bytes of data using atomic_ref
-   //       int& readers_count_ref = *reinterpret_cast<int*>(data);
-   //       std::atomic<int> readers_count_atomic(readers_count_ref);
-   //       readers_count_atomic.store(static_cast<int>(i.second->custom_latch.readers_count.load()));
+
+
+   for (auto& [segment_id, file] : file_handles) {
+           file.reset(); // Close the file
+       }
+
+   // Above code introduced batched writes.
+   // OLD Destructor code, was very slow because it processes each page separately (Above introduced contiguous page writes batched together.).
+   // // Process each segment
+   // for (auto& [segment_id, pages] : segment_pages) {
+   //    try {
+   //       // Open the file for the segment
+   //       std::unique_ptr<File> file = File::open_file((std::to_string(segment_id) + ".txt").c_str(),
+   //                                                    File::Mode::WRITE);
    //
-   //       // Store state in the next bytes of the data buffer using atomic_ref
-   //       int& state_ref = *reinterpret_cast<int*>(data + sizeof(int));
-   //       std::atomic<int> state_atomic(state_ref);
-   //       state_atomic.store(static_cast<int>(i.second->custom_latch.state.load()));
+   //       for (const auto& [offset, data] : pages) {
+   //          // Write only the dirty page to the corresponding offset
+   //          // file->write_block(data, offset, page_size);
    //
-   //       size_t file_offset = get_segment_page_id(i.second->pageNo) * page_size;
-   //       // Check if the offset exceeds the file size before resizing
-   //       if (file_offset + this->page_size > file->size()) {
-   //          file->resize(file_offset + this->page_size);
    //       }
-   //       std::cout << "Flushing PAGE: " << i.second->pageNo << std::endl;
-   //       // File size is the offset of the new page
-   //       file->write_block(data, file_offset, this->page_size);
+   //    } catch (const std::exception& e) {
+   //       std::cerr << "Error writing segment " << segment_id << ": " << e.what() << std::endl;
    //    }
    // }
+
+
+
 }
 
 std::shared_ptr<BufferFrame> BufferManager::fix_page(uint64_t page_id, bool exclusive) {
@@ -314,16 +384,35 @@ std::shared_ptr<BufferFrame> BufferManager::fix_page(uint64_t page_id, bool excl
    new_frame->is_dirty = false;
    new_frame->is_evicted = false;
    bf_lock.unlock();
-   if (exclusive) {
-      new_frame->custom_latch.lock_exclusive();
-      new_frame->is_exclusive = true;
-   } else {
+
+   // Always acquire an exclusive lock when performing a disk read
+   new_frame->custom_latch.lock_exclusive();
+   new_frame->is_exclusive = true;
+
+   // Perform disk read after acquiring the exclusive lock
+   // reading into frame is a write operation, hence exclusive lock is needed.
+   // Lock is reduced to shared lock if request is shared mode
+   read_buffer_frame_from_file(page_id, *new_frame);
+
+   // Downgrade the lock to shared if the operation was not exclusive
+   if (!exclusive) {
+      new_frame->custom_latch.unlock_exclusive();
       new_frame->custom_latch.lock_shared();
       new_frame->is_exclusive = false;
    }
 
-   // load page from disk if it is not in memory(NOT in Hashtable). Use segment id to read from disk & update data field in the BufferFrame
-   read_buffer_frame_from_file(page_id, *new_frame);
+   // OLD CODE, reading into frame is a write operation, hence exclusive lock is needed.
+   // Lock is reduced to shared lock if request is shared mode
+   // if (exclusive) {
+   //    new_frame->custom_latch.lock_exclusive();
+   //    new_frame->is_exclusive = true;
+   // } else {
+   //    new_frame->custom_latch.lock_shared();
+   //    new_frame->is_exclusive = false;
+   // }
+   //
+   // // load page from disk if it is not in memory(NOT in Hashtable). Use segment id to read from disk & update data field in the BufferFrame
+   // read_buffer_frame_from_file(page_id, *new_frame);
 
    // Initialize Locks from file.
    // int& readers_count_ref = *reinterpret_cast<int*>(new_frame->get_data_with_locks());
@@ -338,7 +427,7 @@ std::shared_ptr<BufferFrame> BufferManager::fix_page(uint64_t page_id, bool excl
 
 void BufferManager::unfix_page(std::shared_ptr<BufferFrame> page, const bool is_dirty) {
    std::unique_lock bf_lock(buffer_manager_mutex);
-   page->is_dirty = is_dirty;
+   page->is_dirty = page->is_dirty || is_dirty;
    page->num_fixed -= 1;
    num_fixed_pages.fetch_sub(1ul);
 

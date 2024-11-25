@@ -2,13 +2,16 @@
 #define INCLUDE_MODERNDBS_BUFFER_MANAGER_H
 
 #include "custom_read_writer_lock.h"
+#include "file.h"
 
 #include <algorithm>
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <exception>
 #include <iostream>
+#include <list>
 #include <memory>
 #include <mutex>
 #include <queue>
@@ -17,15 +20,12 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <list>
-#include <cstring>
 
 namespace moderndbs {
 
 class BufferFrame {
    private:
    friend class BufferManager;
-   // TODO: add your implementation here
    uint64_t pageNo;
    // latch
    std::shared_mutex latch;
@@ -86,6 +86,10 @@ class BufferManager {
    size_t page_count;
    // Size in bytes that all pages will have.
    size_t page_size;
+
+
+   mutable std::unordered_map<uint64_t, std::unique_ptr<File>> file_handles; // Cache for open file handles
+   mutable std::mutex file_cache_mutex; // Protects access to the file handle cache
 
    public:
    BufferManager(const BufferManager&) = delete;
