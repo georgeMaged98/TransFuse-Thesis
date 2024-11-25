@@ -5,13 +5,17 @@
 #include <mutex>
 #include <moderndbs/custom_read_writer_lock.h>
 
+#include <iostream>
+#include <mutex>
+#include <moderndbs/custom_read_writer_lock.h>
+
 void moderndbs::CustomReadWriteLock::lock_shared() {
    // std::cout << " ------------------------------------------------------LOCKING SHARED------------------------------------------------------ \n";
    std::unique_lock<std::mutex> lock(mutex_);
    cond_.wait(lock, [this]() {
       // std::cout <<  std::this_thread::get_id() << " CUR STATE " << static_cast<int>(state.load()) << " readers COunt " << readers_count.load() << " writer waiting " << writers_waiting.load() << " is writer activr: " << writer_active.load() << " looooooooooooooooooooooooooooop SHAREDD \n";
       // return state.load() != State::LOCKED_EXCLUSIVE && writers_waiting.load() == 0 && !writer_active.load();
-      return state.load() != State::LOCKED_EXCLUSIVE /* && readers_count.load() > 0 */ && !writer_active.load() /*&& writers_waiting.load() == 0*/;
+      return state.load() != State::LOCKED_EXCLUSIVE /* && readers_count.load() > 0 */ /* && !writer_active.load()*/ /*&& writers_waiting.load() == 0*/;
    });
    if (readers_count.load() == 0) {
       state.store(State::LOCKED_SHARED);
@@ -44,14 +48,14 @@ void moderndbs::CustomReadWriteLock::lock_exclusive() {
    std::unique_lock<std::mutex> lock(mutex_);
    // std::cout << std::this_thread::get_id() << "   exclusive lock. " << static_cast<int>(state.load()) << "   "<< readers_count.load() << "\n";
 
-   writers_waiting.fetch_add(1);
+   // writers_waiting.fetch_add(1);
    cond_.wait(lock, [this]() {
       // std::cout <<  std::this_thread::get_id() << " exc looooooooooooooooooooooooooooop " <<  static_cast<int>(state.load()) << " Readers COunt " << readers_count.load() << "\n";
-      return state.load() == State::UNLOCKED && readers_count.load() == 0 && !writer_active.load(); // Wait until no readers or writers
+      return state.load() == State::UNLOCKED && readers_count.load() == 0 /*&& !writer_active.load()*/; // Wait until no readers or writers
    });
-   writers_waiting.fetch_sub(1);
+   // writers_waiting.fetch_sub(1);
    state.store(State::LOCKED_EXCLUSIVE);
-   writer_active.store(true);
+   // writer_active.store(true);
    // std::cout << "END Acquire EXC lock. Readers: " << readers_count.load() << "  State: " << static_cast<int>(state.load()) << "\n";;
 }
 
@@ -60,7 +64,7 @@ void moderndbs::CustomReadWriteLock::unlock_exclusive() {
    // std::cout << " ------------------------------------------------------UNLOCKING EXC------------------------------------------------------ \n";
    std::unique_lock<std::mutex> lock(mutex_);
    state.store(State::UNLOCKED);
-   writer_active.store(false);
+   // writer_active.store(false);
    cond_.notify_all();
    // std::cout << " END UNLocking EXC: Readers: " << readers_count.load() << "  State: " << static_cast<int>(state.load()) << " WRITER ACTIVE " << writer_active.load() << " WAITING WRITERS " << writers_waiting.load()  << "\n";
 
