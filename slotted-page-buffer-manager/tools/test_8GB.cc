@@ -8,21 +8,20 @@
 #include <random>
 #include <moderndbs/database.h>
 
-static int16_t sp_name = 5512;
-static int16_t fsi_name = 5513;
-static int16_t schema_name = 5514;
-static int16_t wal_name = 5515;
+static int16_t sp_name = 8012;
+static int16_t fsi_name = 8013;
+static int16_t schema_name = 8014;
+static int16_t wal_name = 8015;
 
 /// The BM size that should hold all the data without evicting any pages
 /// Let's consider 600 MB for 512 MB data. (600 MB = 600 * 1024 KB) divided by 4 (KB)
 /// to get number of buffer frame pages that cover whole dataset.
-constexpr static int max_BM_size = (520 * 1024) / 4;
-// constexpr static uint64_t max_num_records = 10485600;
+constexpr static int max_BM_size = (8 * 1024 * 1024) / 4;
 static std::vector<uint64_t> max_num_records = {100000, 1000000}; // 100,000  - 1,000,000
-constexpr static uint64_t max_num_pages = 130070;
+constexpr static uint64_t max_num_pages = 2097148;
 
 static std::vector<double> memory_percent_vec = {0.5, 0.8, 1};
-static std::vector<double> read_percent_vev = {0.8, 0.5, 0.2};
+static std::vector<double> read_percent_vev = {0.2, 0.5, 0.8};
 
 constexpr static double cold_data_percent = 0.1;
 constexpr static double read_data_percent_hot_cold_test = 0.8;
@@ -126,9 +125,6 @@ void random_operations_DB(moderndbs::Database& db, const uint64_t operations_num
 
    for (size_t thread = 0; thread < num_threads; ++thread) {
       workers.emplace_back([thread, &table, &db, read_percent, thread_portion] {
-         size_t progress_threshold = thread_portion / 10; // 10% progress threshold
-         size_t next_progress = progress_threshold; // Next progress checkpoint
-
          /// Each thread has its own random engine (std::mt19937_64 engine{thread};) initialized with a unique seed (thread),
          /// ensuring each thread generates different random values.
          std::mt19937_64 engine{thread};
@@ -140,12 +136,12 @@ void random_operations_DB(moderndbs::Database& db, const uint64_t operations_num
          std::bernoulli_distribution reads_distr{read_percent};
 
          for (size_t j = 0; j < thread_portion; ++j) {
-            auto page = page_distr(engine);
-            auto slot = slot_distr(engine);
-            moderndbs::TID tid{page, slot};
-
             /// Make a random read
             if (reads_distr(engine)) {
+               auto page = page_distr(engine);
+               auto slot = slot_distr(engine);
+
+               moderndbs::TID tid{page, slot};
                // std::cout << " TID " << tid.get_value() <<  " Reading Page: " << page << " SLOT: " << slot << std::endl;
 
                db.read_tuple(table, tid, 1);
@@ -154,17 +150,8 @@ void random_operations_DB(moderndbs::Database& db, const uint64_t operations_num
 
                moderndbs::OrderRecord order = {j, j * 2, j * 100, j % 5, (j % 2 == 0 ? 'G' : 'H')};
                auto transactionID = db.transaction_manager.startTransaction();
-               db.update_tuple(table, tid, order, transactionID);
-               // db.insert(table, order, transactionID);
+               db.insert(table, order, transactionID);
                db.transaction_manager.commitTransaction(transactionID);
-            }
-
-            if (j + 1 >= next_progress) {
-               std::cout << "Thread " << thread << ": "
-                         << ((j + 1) * 100 / thread_portion) << "% complete ("
-                         << (j + 1) << "/" << thread_portion << " operations)."
-                         << std::endl;
-               next_progress += progress_threshold;
             }
          }
          // std::cout << " THREAD FINISHED \n";
@@ -191,9 +178,6 @@ void hot_cold_operations_DB(moderndbs::Database& db, const uint64_t operations_n
 
    for (size_t thread = 0; thread < num_threads; ++thread) {
       workers.emplace_back([thread, &table, &db, cold_data_percent, thread_portion, read_percent] {
-         size_t progress_threshold = thread_portion / 10; // 10% progress threshold
-         size_t next_progress = progress_threshold; // Next progress checkpoint
-
          /// Each thread has its own random engine (std::mt19937_64 engine{thread};) initialized with a unique seed (thread),
          /// ensuring each thread generates different random values.
          std::mt19937_64 engine{thread};
@@ -258,14 +242,6 @@ void hot_cold_operations_DB(moderndbs::Database& db, const uint64_t operations_n
                   db.transaction_manager.commitTransaction(transactionID);
                }
             }
-
-            if (j + 1 >= next_progress) {
-               std::cout << "Thread " << thread << ": "
-                         << ((j + 1) * 100 / thread_portion) << "% complete ("
-                         << (j + 1) << "/" << thread_portion << " operations)."
-                         << std::endl;
-               next_progress += progress_threshold;
-            }
          }
          // std::cout << " THREAD FINISHED \n";
       });
@@ -291,12 +267,14 @@ void reset_cache() {
 }
 
 int main() {
-   cout << "Testing 512M" << endl;
-   //
+   cout << "Testing 8GB" << endl;
+
+    //
    // {
-   //    auto db = moderndbs::Database(0.5 * max_BM_size, wal_name);
+   //    auto db = moderndbs::Database(0.8 * max_BM_size, wal_name);
    //    db.load_schema(schema_name);
-   //    random_operations_DB(db, 1000000, 0.5);
+   //    scan_DB(db,0, max_num_pages);
+   //    // random_operations_DB(db, 300000, 0.5);
    //
    //    // moderndbs::TID tid{0, 0};
    //    // moderndbs::OrderRecord order = {5, 5 * 2, 5 * 100, 5 % 5, (5 % 2 == 0 ? 'G' : 'H')};
@@ -318,51 +296,61 @@ int main() {
       // reset_cache();
 
       /// 2. Run the Scan
-      std::cout << " Running a full table scan with memory %: " << memory_percent << std::endl;
-      {
+      std::cout << " ------------------------ memory %: " << memory_percent * 100 << " ------------------------ " << std::endl;
+      for (int i = 0; i < 3; ++i) {
+         std::cout << "RUN " << i << std::endl;
          auto db = moderndbs::Database(localBMSize, wal_name);
          db.load_schema(schema_name);
          scan_DB(db, 0, max_num_pages);
       }
-
-
-      for (uint64_t cur_op : max_num_records) {
-         std::cout << " Num Records: " << cur_op << std::endl;
-
-         // /// Perform Random Reads
-         for (double read_percent : read_percent_vev) {
-            std::cout << " Running random table operation with memory %: "
-                      << memory_percent << " and Read % " << read_percent << std::endl;
-
-            /// 1. Reset
-            // reset_cache();
-
-            /// 2. Run Random Operations
-            {
-               auto db = moderndbs::Database(localBMSize, wal_name);
-               db.load_schema(schema_name);
-               random_operations_DB(db, cur_op, read_percent);
-            }
-         }
-
-         /// HOT and Cold Access Pattern
-
-         /// 1. Reset
-         // reset_cache();
-
-         /// 2. run hot and cold access pattern.
-         std::cout << " Running hot Cold table operation Test with memory %: "
-                   << memory_percent << " and Read % " << read_data_percent_hot_cold_test
-                   << " Cold Data % " << cold_data_percent << std::endl;
-         {
-            auto db = moderndbs::Database(localBMSize, wal_name);
-            db.load_schema(schema_name);
-            hot_cold_operations_DB(db, cur_op, cold_data_percent, read_data_percent_hot_cold_test);
-         }
-      }
+      //
+      // for (uint64_t cur_op : max_num_records) {
+      //    // std::cout << " Num Records: " << cur_op << std::endl;
+      //
+      //    // /// Perform Random Reads
+      //    for (double read_percent : read_percent_vev) {
+      //       // std::cout << " Running random table operation with memory %: "
+      //       //           << memory_percent << " and Read % " << read_percent << std::endl;
+      //
+      //       /// 1. Reset
+      //       // reset_cache();
+      //
+      //       /// 2. Run Random Operations
+      //       {
+      //          auto db = moderndbs::Database(localBMSize, wal_name);
+      //          db.load_schema(schema_name);
+      //          random_operations_DB(db, cur_op, read_percent);
+      //       }
+      //    }
+      //
+      //    /// HOT and Cold Access Pattern
+      //
+      //    /// 1. Reset
+      //    // reset_cache();
+      //
+      //    /// 2. run hot and cold access pattern.
+      //    // std::cout << " Running hot Cold table operation Test with memory %: "
+      //    //           << memory_percent << " and Read % " << read_data_percent_hot_cold_test
+      //    //           << " Cold Data % " << cold_data_percent << std::endl;
+      //    {
+      //       auto db = moderndbs::Database(localBMSize, wal_name);
+      //       db.load_schema(schema_name);
+      //       hot_cold_operations_DB(db, cur_op, cold_data_percent, read_data_percent_hot_cold_test);
+      //    }
+      // }
    }
+
+
 
    // // initialize_schema();
    // scan_DB(db, 0, 2);
+   //
+   // auto db = moderndbs::Database(max_BM_size, wal_name);
+   // uint64_t num_rows = max_num_pages * 80;
+   // uint64_t round2 = num_rows / 2;
+   // std::cout << "INSERTING " << round2 << " rows." << std::endl;
+   // // initialize_schema();
+   // db.load_schema(schema_name);
+   // initialize_DB(db, round2);
    return 0;
 }

@@ -6,7 +6,7 @@
 # Sources
 # ---------------------------------------------------------------------------
 
-set(TOOLS_SRC tools/database_wrapper.cc tools/test_512M.cc tools/test_1GB.cc tools/test_4GB.cc)
+set(TOOLS_SRC tools/database_wrapper.cc tools/test_512M.cc tools/test_1GB.cc tools/test_4GB.cc, tools/test_8GB.cc)
 
 # ---------------------------------------------------------------------------
 # Executables
@@ -24,6 +24,9 @@ target_link_libraries(test1GB moderndbs Threads::Threads)
 
 add_executable(test4GB tools/test_4GB.cc)
 target_link_libraries(test4GB moderndbs Threads::Threads)
+
+add_executable(test8GB tools/test_8GB.cc)
+target_link_libraries(test8GB moderndbs Threads::Threads)
 
 # ---------------------------------------------------------------------------
 # Linting
