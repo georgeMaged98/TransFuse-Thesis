@@ -17,7 +17,7 @@ moderndbs::TID moderndbs::Database::insert(const schema::Table &table, OrderReco
 
 void moderndbs::Database::update_tuple(const schema::Table &table, const TID tid, OrderRecord &order, uint64_t transactionId) {
    auto rec = read_tuple(table, tid, transactionId);
-   const uint64_t lsn = wal_segment->appendRecord(transactionId, TransactionState::RUNNING, &rec.value(), &order);
+   const uint64_t lsn = wal_segment->appendRecord(transactionId, TransactionState::RUNNING, rec ? &rec.value() : nullptr, &order);
    // Allocate memory for the serialized data
    SPSegment &sp = *slotted_pages.at(table.sp_segment);
    auto* data = reinterpret_cast<std::byte*>(&order);
