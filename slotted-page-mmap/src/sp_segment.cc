@@ -14,7 +14,6 @@ SPSegment::SPSegment(uint16_t segment_id, FileMapper& file_mapper, SchemaSegment
 }
 
 TID SPSegment::allocate(uint32_t size) {
-   // TODO: add your implementation here
    // Allocate a new record.
    // The allocate method should use the free-space inventory to find a suitable page quickly.
    fsi.fsi_mutex.lock();
@@ -23,11 +22,12 @@ TID SPSegment::allocate(uint32_t size) {
       uint64_t page_id = page_with_free_space.value();
       auto page = file_mapper.get_page(page_id, true);
       auto* page_data = page->get_data();
+
       // If the page is already there, it's sufficient to use reinterpret_cast<SlottedPage*>
       auto* slotted_page = reinterpret_cast<SlottedPage*>(page_data);
       auto slot_id = slotted_page->allocate(size, file_mapper.get_data_size());
+
       // Unfix the page
-      // file_mapper.unfix_page(page, true);
       file_mapper.release_page(page);
 
       // Update fsi
@@ -45,51 +45,55 @@ TID SPSegment::allocate(uint32_t size) {
    const uint16_t slot_id = slotted_page->allocate(size, file_mapper.get_data_size());
 
    const auto tid = TID(new_page_id, slot_id);
+
    // Unfix the page
-   // file_mapper.unfix_page(page, true);
    file_mapper.release_page(page);
+
    // update free_space_inventory
    fsi.update(new_page_id, slotted_page->header.free_space);
    fsi.fsi_mutex.unlock();
+
    // Returns a TID that stores the page as well as the slot of the allocated record.
    return tid;
 }
 
 std::optional<uint32_t> SPSegment::read(const TID tid, std::byte* record, const uint32_t capacity) const {
-   // TODO: add your implementation here
    // The tid.get_page_id() does the same functionality of the XOR that was used in the schema_segment and fsi_segment.
    // Hence, we just pass the result page_id to file_mapper
    auto page_id = tid.get_page_id(segment_id);
+
    // First, I need to find the slot that was previously allocated in allocate method. TID is used for that.
    auto page = file_mapper.get_page(page_id, false);
+
    // If the page is already there, it's sufficient to use reinterpret_cast<SlottedPage*>
    auto* slotted_page = reinterpret_cast<SlottedPage*>(page->get_data());
    auto& slot = slotted_page->get_slots()[tid.get_slot()];
 
    if (slot.is_empty()) {
+      file_mapper.release_page(page);
       return std::nullopt;
    }
 
    if (slot.is_redirect()) {
       TID redirect_tid = slot.as_redirect_tid();
-      // file_mapper.unfix_page(page, true);
       file_mapper.release_page(page);
       return read(redirect_tid, record, capacity);
    }
+
    uint32_t read_bytes = std::min(slot.get_size(), capacity);
    memcpy(record, slotted_page->get_data() + slot.get_offset(), read_bytes);
-   // file_mapper.unfix_page(page, true);
    file_mapper.release_page(page);
    return read_bytes;
 }
 
 uint32_t SPSegment::write(TID tid, std::byte* record, uint32_t record_size, uint64_t lsn, bool is_update) {
-   // TODO: add your implementation here
    // The tid.get_page_id() does the same functionality of the XOR that was used in the schema_segment and fsi_segment.
    // Hence, we just pass the result page_id to file_mapper
    const auto page_id = tid.get_page_id(segment_id);
+
    // First, I need to find the slot that was previously allocated in allocate method. TID is used for that.
    auto page = file_mapper.get_page(page_id, true);
+
    // If the page is already there, it's sufficient to use reinterpret_cast<SlottedPage*>
    auto& slotted_page = *reinterpret_cast<SlottedPage*>(page->get_data());
    auto& slot = slotted_page.get_slots()[tid.get_slot()];
@@ -100,7 +104,6 @@ uint32_t SPSegment::write(TID tid, std::byte* record, uint32_t record_size, uint
 
    if (slot.is_redirect()) {
       TID redirect_tid = slot.as_redirect_tid();
-      // file_mapper.unfix_page(page, true);
       file_mapper.release_page(page);
       return write(redirect_tid, record, record_size, lsn);
    }
@@ -111,7 +114,7 @@ uint32_t SPSegment::write(TID tid, std::byte* record, uint32_t record_size, uint
 
    /// UPDATE LSN on page
    page->set_lsn(lsn);
-   // file_mapper.unfix_page(page, true);
+
    file_mapper.release_page(page);
    return written_bytes;
 }
@@ -167,12 +170,12 @@ void SPSegment::resize(TID tid, uint32_t new_length) {
 }
 
 bool SPSegment::erase(TID tid, uint64_t lsn) {
-   // TODO: add your implementation here
    fsi.fsi_mutex.lock();
    // tid.get_page_id() does the same functionality of the XOR that was used in the schema_segment and fsi_segment.
    // Hence, we just pass the result page_id to file_mapper
    // First, I need to find the slot that was previously allocated in allocate method. TID is used for that.
    auto page = file_mapper.get_page(tid.get_page_id(segment_id), true);
+
    // If the page is already there, it's sufficient to use reinterpret_cast<SlottedPage*>
    auto& slotted_page = *reinterpret_cast<SlottedPage*>(page->get_data());
    const auto& slot = slotted_page.get_slots()[tid.get_slot()];
@@ -181,14 +184,16 @@ bool SPSegment::erase(TID tid, uint64_t lsn) {
       file_mapper.release_page(page);
       return false;
    }
+
    if (slot.is_redirect()) {
       file_mapper.release_page(page);
       return erase(slot.as_redirect_tid(), lsn);
    }
    slotted_page.erase(tid.get_slot());
+
    /// UPDATE LSN on page
    page->set_lsn(lsn);
-   // file_mapper.unfix_page(page, true);
+
    file_mapper.release_page(page);
    fsi.update(tid.get_page_id(segment_id), slotted_page.get_free_space());
    fsi.fsi_mutex.unlock();
