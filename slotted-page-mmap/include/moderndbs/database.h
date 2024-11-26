@@ -22,15 +22,14 @@ struct OrderRecord {
 class Database {
    public:
    /// Constructor.
-   Database() :
-      // schema_file_mapper("schema_segment.txt", (sysconf(_SC_PAGESIZE))),
-      //  fsi_file_mapper("fsi_segment.txt", (sysconf(_SC_PAGESIZE))),
-      //  sp_file_mapper("sp_segment.txt", (sysconf(_SC_PAGESIZE))),
-      //  wal_file_mapper("wal_segment.txt", (sysconf(_SC_PAGESIZE))),
-       schema_file_mapper("/tmp/transfuse_mnt/schema_segment.txt", (sysconf(_SC_PAGESIZE))),
-       fsi_file_mapper("/tmp/transfuse_mnt/fsi_segment.txt", (sysconf(_SC_PAGESIZE))),
-       sp_file_mapper("/tmp/transfuse_mnt/sp_segment.txt", (sysconf(_SC_PAGESIZE))),
-       wal_file_mapper("/tmp/transfuse_mnt/wal_segment.txt", (sysconf(_SC_PAGESIZE))),
+   Database(const std::string& schema_file_name,
+             const std::string& fsi_file_name,
+             const std::string& sp_file_name,
+             const std::string& wal_file_name, uint64_t initial_mmap_size) :
+       schema_file_mapper(schema_file_name, (sysconf(_SC_PAGESIZE)),initial_mmap_size),
+       fsi_file_mapper(fsi_file_name, (sysconf(_SC_PAGESIZE)),initial_mmap_size),
+       sp_file_mapper(sp_file_name, (sysconf(_SC_PAGESIZE)), initial_mmap_size),
+       wal_file_mapper(wal_file_name, (sysconf(_SC_PAGESIZE)), initial_mmap_size),
        wal_segment(std::make_unique<WALSegment>(wal_file_mapper)),
        transaction_manager(*wal_segment){ // Pass by reference
 }
