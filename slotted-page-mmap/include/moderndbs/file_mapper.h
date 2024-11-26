@@ -98,13 +98,13 @@ class Page {
 class FileMapper {
    static constexpr uint64_t maxMapSize = 10LL << 30; // 10GB
    static constexpr uint64_t maxMmapStep = 1LL << 30; // 1GB
-   static constexpr uint64_t minMmapFileSize = 1LL << 30; // 1GB
 
    public:
    static constexpr uint32_t headerSize = 2 * sizeof(size_t) + 1;
    static constexpr uint32_t lockDataSize = 2 * sizeof(int);
+   std::string filename_;
 
-   FileMapper(std::string filename, size_t page_size);
+   FileMapper(std::string filename, size_t page_size, uint64_t initial_file_size);
 
    ~FileMapper();
 
@@ -131,9 +131,10 @@ class FileMapper {
    void sync_file_range_with_disk(uint64_t page_offset_in_file, uint64_t write_size) const;
 
    private:
-   std::string filename_;
    size_t page_size_;
    uint64_t file_size_;
+   uint64_t minMmapFileSize;
+
    /// Max number of pages that the current file can hold.
    /// (e.g.) a file with size of 32KB can hold (32KB / page_size) entries.
    size_t num_pages_;

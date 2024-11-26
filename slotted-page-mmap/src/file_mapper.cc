@@ -17,13 +17,13 @@
 namespace moderndbs {
     static thread_local std::mt19937_64 engine{std::random_device{}()}; // Use a random device as seed
 
-    FileMapper::FileMapper(std::string filename, const size_t page_size)
-        : filename_(std::move(filename)), page_size_(page_size), file_size_(0), mmap_ptr_(nullptr) {
+    FileMapper::FileMapper(std::string filename, const size_t page_size, uint64_t initial_file_size)
+        : filename_(std::move(filename)), page_size_(page_size),  file_size_(0), minMmapFileSize(initial_file_size), mmap_ptr_(nullptr) {
         // lock mmaped file
         // adapt the mmaped size while having the lock
         // check mmap size in boltDB
 
-        map_file(minMmapFileSize);
+        map_file(initial_file_size);
     }
 
     FileMapper::~FileMapper() {
@@ -79,7 +79,7 @@ namespace moderndbs {
 
 
     void FileMapper::make_no_op(const size_t page_offset) {
-        cout << "INSIDE NO OP \n";
+        // cout << "INSIDE NO OP \n";
         if (mmap_ptr_ == nullptr || mmap_ptr_ == MAP_FAILED) {
             std::cerr << "Error: mmap_ptr_ is invalid.\n";
             return;
@@ -99,7 +99,7 @@ namespace moderndbs {
         char *byte_to_modify = mapped_data;
         char original_value = *byte_to_modify;
         *byte_to_modify = original_value;
-        std::cout << "No-op write performed at offset " << page_offset << " (address: " << static_cast<void *>(byte_to_modify) << ").\n";
+        // std::cout << "No-op write performed at offset " << page_offset << " (address: " << static_cast<void *>(byte_to_modify) << ").\n";
     }
 
     /**
@@ -226,10 +226,10 @@ namespace moderndbs {
     void FileMapper::append_to_wal_file(const char *data, size_t data_size) {
         std::shared_ptr<Page> page = get_page(0, true);
         const auto &latest_flushed_LSN = *reinterpret_cast<uint64_t *>(page->get_data());
-        // printf(" BEFORE APPENDING: LATEST FLUSHED LSN: %lu \n", latest_flushed_LSN);
+
         /// sizeof(uint64_t) -> LSN COUNT
         size_t offset = headerSize + lockDataSize + sizeof(uint64_t) + latest_flushed_LSN * sizeof(LogRecord);
-        /// TODO: File Resizing
+
         uint64_t new_file_size = offset + data_size;
         if (new_file_size > file_size_) {
             map_file(file_size_ + data_size);
@@ -241,7 +241,7 @@ namespace moderndbs {
         // printf(" LATEST FLUSHED LSN: %lu \n", new_lsn_count);
         memcpy(data_start, data, data_size);
         release_page(page);
-        // TODO: msync
+
         // Write it now to disk
         if (msync(mmap_ptr_, new_file_size, MS_ASYNC) == -1) {
             perror("Could not sync the file to disk");
