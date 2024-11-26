@@ -8,6 +8,8 @@
 #include <cmath>
 #include <optional>
 
+#include "file.h"
+
 namespace moderndbs {
 struct OrderRecord;
 
@@ -195,8 +197,10 @@ class WALSegment : public Segment {
 
    /// Flushes the current WAL records to disk.
    void flushWal();
+   /// Appends to the End of WAL File
+   void append_to_WAL_Segment(const char* data, size_t data_size);
 
-   std::pair<std::vector<char>, size_t>  serialize();
+   std::pair<char*, size_t> serialize(std::vector<LogRecord> recs);
 
    /// Timer function that wakes up every x seconds to flush WAL to disk.
    void runEveryXSeconds(uint64_t milliseconds, std::atomic<bool>& stop_sig) {
@@ -211,18 +215,17 @@ class WALSegment : public Segment {
    /// Vector storing LogRecords that are not flushed to disk.
    std::vector<LogRecord> records;
    /// Log Sequence Number
-   uint64_t LSN{};
+   std::atomic<uint64_t> LSN{0};
    /// WAL latch
    std::shared_mutex wal_mutex;
    /// Last LSN in log on disk
-   uint64_t flushedLSN{};
+   std::atomic<uint64_t> flushedLSN{0};
    /// Last Transaction Number in log on disk
-   uint64_t latest_txn_no;
-
+   std::atomic<uint64_t> latest_txn_no{0};
+   /// WAL file
+   std::unique_ptr<File> wal_file;
    std::atomic<bool> stop_background_flush;
-
    std::thread flush_thread;
-
    uint64_t flush_interval_ms = 100;
 };
 
