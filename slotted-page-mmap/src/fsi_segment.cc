@@ -162,7 +162,7 @@ std::optional<uint64_t> FSISegment::find(uint32_t required_space) {
                                                fsi_total_entries - (current_page_id * entries_per_page));
 
         // Iterate over entries in this page
-        for (int i = 0; i < entries_in_this_page; ++i) {
+        for (int i = 0; i < entries_in_this_page / 2; ++i) {
             uint8_t current_byte = reinterpret_cast<uint8_t *>(page_data + header_offset)[i];
 
             // Check the high nibble (4 bits)
