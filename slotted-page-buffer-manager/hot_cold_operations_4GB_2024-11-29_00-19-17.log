@@ -1,0 +1,30 @@
+--------------------------  Memory Percent 100 % --------------------
+FINITO HOT COLD - Time taken: 175 seconds - Num Operations: 4000 point query % 0.2 Read % 0.8 cold data % 0.2 total pages touched: 975330 BM_X: 0.93
+FINITO HOT COLD - Time taken: 160 seconds - Num Operations: 4000 point query % 0.50 Read % 0.80 cold data % 0.20 total pages touched: 624584 BM_X: 0.60
+FINITO HOT COLD - Time taken: 119 seconds - Num Operations: 4000 point query % 0.80 Read % 0.80 cold data % 0.20 total pages touched: 252838 BM_X: 0.24
+FINITO HOT COLD - Time taken: 569 seconds - Num Operations: 30000 point query % 0.20 Read % 0.80 cold data % 0.20 total pages touched: 7215201 BM_X: 6.88
+FINITO HOT COLD - Time taken: 615 seconds - Num Operations: 30000 point query % 0.50 Read % 0.80 cold data % 0.20 total pages touched: 4514028 BM_X: 4.30
+FINITO HOT COLD - Time taken: 656 seconds - Num Operations: 30000 point query % 0.80 Read % 0.80 cold data % 0.20 total pages touched: 1793741 BM_X: 1.71
+FINITO HOT COLD - Time taken: 710 seconds - Num Operations: 40000 point query % 0.20 Read % 0.80 cold data % 0.20 total pages touched: 9622313 BM_X: 9.17
+FINITO HOT COLD - Time taken: 645 seconds - Num Operations: 40000 point query % 0.50 Read % 0.80 cold data % 0.20 total pages touched: 6030054 BM_X: 5.75
+FINITO HOT COLD - Time taken: 620 seconds - Num Operations: 40000 point query % 0.80 Read % 0.80 cold data % 0.20 total pages touched: 2419069 BM_X: 2.31
+--------------------------  Memory Percent 0.80 % -------------------- 
+FINITO HOT COLD - Time taken: 97 seconds - Num Operations: 4000 point query % 0.20 Read % 0.80 cold data % 0.20 total pages touched: 975330 BM_X: 1.16
+FINITO HOT COLD - Time taken: 88 seconds - Num Operations: 4000 point query % 0.50 Read % 0.80 cold data % 0.20 total pages touched: 624584 BM_X: 0.74
+FINITO HOT COLD - Time taken: 62 seconds - Num Operations: 4000 point query % 0.80 Read % 0.80 cold data % 0.20 total pages touched: 252838 BM_X: 0.30
+FINITO HOT COLD - Time taken: 516 seconds - Num Operations: 30000 point query % 0.20 Read % 0.80 cold data % 0.20 total pages touched: 7215201 BM_X: 8.60
+FINITO HOT COLD - Time taken: 412 seconds - Num Operations: 30000 point query % 0.50 Read % 0.80 cold data % 0.20 total pages touched: 4514028 BM_X: 5.38
+FINITO HOT COLD - Time taken: 481 seconds - Num Operations: 30000 point query % 0.80 Read % 0.80 cold data % 0.20 total pages touched: 1793741 BM_X: 2.14
+FINITO HOT COLD - Time taken: 654 seconds - Num Operations: 40000 point query % 0.20 Read % 0.80 cold data % 0.20 total pages touched: 9622313 BM_X: 11.47
+FINITO HOT COLD - Time taken: 554 seconds - Num Operations: 40000 point query % 0.50 Read % 0.80 cold data % 0.20 total pages touched: 6030054 BM_X: 7.19
+FINITO HOT COLD - Time taken: 516 seconds - Num Operations: 40000 point query % 0.80 Read % 0.80 cold data % 0.20 total pages touched: 2419069 BM_X: 2.88
+--------------------------  Memory Percent 0.50 % -------------------- 
+FINITO HOT COLD - Time taken: 100 seconds - Num Operations: 4000 point query % 0.20 Read % 0.80 cold data % 0.20 total pages touched: 975330 BM_X: 1.86
+FINITO HOT COLD - Time taken: 88 seconds - Num Operations: 4000 point query % 0.50 Read % 0.80 cold data % 0.20 total pages touched: 624584 BM_X: 1.19
+FINITO HOT COLD - Time taken: 60 seconds - Num Operations: 4000 point query % 0.80 Read % 0.80 cold data % 0.20 total pages touched: 252838 BM_X: 0.48
+FINITO HOT COLD - Time taken: 788 seconds - Num Operations: 30000 point query % 0.20 Read % 0.80 cold data % 0.20 total pages touched: 7215201 BM_X: 13.76
+FINITO HOT COLD - Time taken: 884 seconds - Num Operations: 30000 point query % 0.50 Read % 0.80 cold data % 0.20 total pages touched: 4514028 BM_X: 8.61
+FINITO HOT COLD - Time taken: 581 seconds - Num Operations: 30000 point query % 0.80 Read % 0.80 cold data % 0.20 total pages touched: 1793741 BM_X: 3.42
+FINITO HOT COLD - Time taken: 1075 seconds - Num Operations: 40000 point query % 0.20 Read % 0.80 cold data % 0.20 total pages touched: 9622313 BM_X: 18.35
+FINITO HOT COLD - Time taken: 1122 seconds - Num Operations: 40000 point query % 0.50 Read % 0.80 cold data % 0.20 total pages touched: 6030054 BM_X: 11.50
+FINITO HOT COLD - Time taken: 785 seconds - Num Operations: 40000 point query % 0.80 Read % 0.80 cold data % 0.20 total pages touched: 2419069 BM_X: 4.61
