@@ -81,9 +81,10 @@ static uint64_t get_latest_flushed_LSN(const char *fuse_root_dir) {
 
     // Buffer to hold the 8 bytes
     uint64_t latestFlushedLSN;
-    static constexpr uint32_t headerSize = 2 * sizeof(size_t) + 1;
-    static constexpr uint32_t lockDataSize = 2 * sizeof(int);
-    size_t offset = headerSize + lockDataSize;
+    // static constexpr uint32_t headerSize = 2 * sizeof(size_t) + 1;
+    // static constexpr uint32_t lockDataSize = 2 * sizeof(int);
+    // size_t offset = headerSize + lockDataSize;
+    size_t offset = 0;
 
     // Read the first 8 bytes of the file
     ssize_t res = pread(fd, &latestFlushedLSN, sizeof(uint64_t), offset);
@@ -94,7 +95,7 @@ static uint64_t get_latest_flushed_LSN(const char *fuse_root_dir) {
 
 
     // Print the LSN value
-    std::cout << "Latest Flushed LSN: " << latestFlushedLSN << std::endl;
+    // std::cout << "Latest Flushed LSN: " << latestFlushedLSN << std::endl;
 
     // Close the file descriptor
     close(fd);
@@ -105,7 +106,8 @@ static uint64_t get_latest_flushed_LSN(const char *fuse_root_dir) {
 
 static bool check_valid_wal(const char *buffer, const char *path, const char *root_path) {
     size_t lsn_ref = *reinterpret_cast<const size_t *>(buffer + 2 * sizeof(int) + sizeof(size_t));
-    printf("LSN IN PAGE and path is %s : %lu\n", path, lsn_ref);
+
+    // printf("LSN IN PAGE and path is %s : %lu\n", path, lsn_ref);
     uint64_t latest_flushed_lsn = get_latest_flushed_LSN(root_path);
     bool is_valid = strcmp(path, "/sp_segment.txt") != 0 || lsn_ref <= latest_flushed_lsn;
     return is_valid;
@@ -116,7 +118,7 @@ static bool check_valid_wal(const char *buffer, const char *path, const char *ro
 static bool check_valid_locks(const char *buffer) {
     int readers_count_ref = *reinterpret_cast<const int *>(buffer);
     int state = *reinterpret_cast<const int *>(buffer + sizeof(int));
-    printf("First int: %d, Second int: %d\n", readers_count_ref, state);
+    // printf("First int: %d, Second int: %d\n", readers_count_ref, state);
     return state != 2;
 }
 
