@@ -235,7 +235,7 @@ BufferManager::~BufferManager() {
    // Process each segment
    for (auto& [segment_id, pages] : segment_pages) {
       try {
-         std::cout << " Writing Segment: " << segment_id << " Number of pages: " << pages.size() << std::endl;
+         // std::cout << " Writing Segment: " << segment_id << " Number of pages: " << pages.size() << std::endl;
          // Open the file for the segment
          std::unique_ptr<File> file = File::open_file((std::to_string(segment_id) + ".txt").c_str(), File::Mode::WRITE);
 
@@ -279,7 +279,7 @@ BufferManager::~BufferManager() {
             // Update progress
             if (i + 1 >= next_progress) {
                size_t percentage = (i + 1) * 100 / pages.size();
-               std::cout << "Segment " << segment_id << ": " << percentage << "% complete (" << (i + 1) << "/" << pages.size() << " pages)." << std::endl;
+               // std::cout << "Segment " << segment_id << ": " << percentage << "% complete (" << (i + 1) << "/" << pages.size() << " pages)." << std::endl;
                next_progress += progress_threshold; // Move to the next 10% checkpoint
             }
 
