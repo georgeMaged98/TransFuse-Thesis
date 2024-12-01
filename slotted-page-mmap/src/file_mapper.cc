@@ -55,9 +55,9 @@ namespace moderndbs {
         page_ptr->set_readers_count(page_ptr->custom_latch.readers_count.load());
         page_ptr->set_state(static_cast<int>(page_ptr->custom_latch.state.load()));
 
-        if (mlock(mapped_data, page_size_) != 0) {
-            perror("mlock");
-        }
+        // if (mlock(mapped_data, page_size_) != 0) {
+        //     perror("mlock");
+        // }
 
         // if (madvise(mmap_ptr_ + pos, page_size_, MADV_DONTNEED) == -1) {
         //    perror("madvise");
@@ -90,7 +90,7 @@ namespace moderndbs {
             return;
         }
         char *mapped_data = static_cast<char *>(mmap_ptr_) + page_offset;
-        std::cout << "Accessing mapped memory at offset: " << page_offset << "\n";
+        // std::cout << "Accessing mapped memory at offset: " << page_offset << "\n";
         // int readers_count_ref = *reinterpret_cast<const int *>(mapped_data);
         // std::cout << "First int: " << readers_count_ref << "\n";
         // int state = *reinterpret_cast<const int *>(mapped_data + sizeof(int));
@@ -138,9 +138,9 @@ namespace moderndbs {
         page->set_readers_count(page->custom_latch.readers_count.load());
         page->set_state(static_cast<int>(page->custom_latch.state.load()));
 
-        if (munlock(page->get_data_with_header(),page_size_) != 0) {
-            perror("munlock");
-        }
+        // if (munlock(page->get_data_with_header(),page_size_) != 0) {
+        //     perror("munlock");
+        // }
     }
 
     uint64_t FileMapper::calculate_file_size(const uint64_t oldFileSize) const {
@@ -152,9 +152,9 @@ namespace moderndbs {
         }
 
         // Verify the requested size is not above the maximum allowed.
-        if (oldFileSize > maxMapSize) {
-            throw std::runtime_error("mmap too large");
-        }
+        // if (oldFileSize > maxMapSize) {
+        //     throw std::runtime_error("mmap too large");
+        // }
 
         // If larger than 1GB, then grow by 1GB at a time.
         auto sz = static_cast<int64_t>(oldFileSize);

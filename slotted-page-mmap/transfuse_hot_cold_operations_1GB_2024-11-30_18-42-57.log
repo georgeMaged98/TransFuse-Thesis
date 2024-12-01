@@ -1,0 +1,30 @@
+------------------------------------ 100% ----------------------------
+FINITO HOT COLD - Time taken: 52 seconds - Num Operations: 1000 point query % 0.2 Read % 0.8 cold data % 0.2 total pages touched: 244877 Mem_X: 0.93
+FINITO HOT COLD - Time taken: 26 seconds - Num Operations: 1000 point query % 0.50 Read % 0.80 cold data % 0.20 total pages touched: 153357 Mem_X: 0.59
+FINITO HOT COLD - Time taken: 11 seconds - Num Operations: 1000 point query % 0.80 Read % 0.80 cold data % 0.20 total pages touched: 59615 Mem_X: 0.23
+FINITO HOT COLD - Time taken: 174 seconds - Num Operations: 7500 point query % 0.20 Read % 0.80 cold data % 0.20 total pages touched: 1794294 Mem_X: 6.85
+FINITO HOT COLD - Time taken: 116 seconds - Num Operations: 7500 point query % 0.50 Read % 0.80 cold data % 0.20 total pages touched: 1134459 Mem_X: 4.33
+FINITO HOT COLD - Time taken: 47 seconds - Num Operations: 7500 point query % 0.80 Read % 0.80 cold data % 0.20 total pages touched: 452551 Mem_X: 1.73
+FINITO HOT COLD - Time taken: 124 seconds - Num Operations: 10000 point query % 0.20 Read % 0.80 cold data % 0.20 total pages touched: 2402627 Mem_X: 9.17
+FINITO HOT COLD - Time taken: 95 seconds - Num Operations: 10000 point query % 0.50 Read % 0.80 cold data % 0.20 total pages touched: 1517354 Mem_X: 5.79
+FINITO HOT COLD - Time taken: 44 seconds - Num Operations: 10000 point query % 0.80 Read % 0.80 cold data % 0.20 total pages touched: 601994 Mem_X: 2.30
+------------------------------------ 80% ----------------------------
+FINITO HOT COLD - Time taken: 13 seconds - Num Operations: 1000 point query % 0.2 Read % 0.8 cold data % 0.2 total pages touched: 244877 Mem_X: 1.17
+FINITO HOT COLD - Time taken: 12 seconds - Num Operations: 1000 point query % 0.50 Read % 0.80 cold data % 0.20 total pages touched: 153357 Mem_X: 0.73
+FINITO HOT COLD - Time taken: 7 seconds - Num Operations: 1000 point query % 0.80 Read % 0.80 cold data % 0.20 total pages touched: 59615 Mem_X: 0.28
+FINITO HOT COLD - Time taken: 93 seconds - Num Operations: 7500 point query % 0.20 Read % 0.80 cold data % 0.20 total pages touched: 1794294 Mem_X: 8.56
+FINITO HOT COLD - Time taken: 68 seconds - Num Operations: 7500 point query % 0.50 Read % 0.80 cold data % 0.20 total pages touched: 1134459 Mem_X: 5.41
+FINITO HOT COLD - Time taken: 33 seconds - Num Operations: 7500 point query % 0.80 Read % 0.80 cold data % 0.20 total pages touched: 452551 Mem_X: 2.16
+FINITO HOT COLD - Time taken: 122 seconds - Num Operations: 10000 point query % 0.20 Read % 0.80 cold data % 0.20 total pages touched: 2402627 Mem_X: 11.46
+FINITO HOT COLD - Time taken: 84 seconds - Num Operations: 10000 point query % 0.50 Read % 0.80 cold data % 0.20 total pages touched: 1517354 Mem_X: 7.24
+FINITO HOT COLD - Time taken: 46 seconds - Num Operations: 10000 point query % 0.80 Read % 0.80 cold data % 0.20 total pages touched: 601994 Mem_X: 2.87
+------------------------------------ 50% ----------------------------
+FINITO HOT COLD - Time taken: 21 seconds - Num Operations: 1000 point query % 0.2 Read % 0.8 cold data % 0.2 total pages touched: 244877 Mem_X: 1.87
+FINITO HOT COLD - Time taken: 12 seconds - Num Operations: 1000 point query % 0.50 Read % 0.80 cold data % 0.20 total pages touched: 153357 Mem_X: 1.17
+FINITO HOT COLD - Time taken: 7 seconds - Num Operations: 1000 point query % 0.80 Read % 0.80 cold data % 0.20 total pages touched: 59615 Mem_X: 0.45
+FINITO HOT COLD - Time taken: 98 seconds - Num Operations: 7500 point query % 0.20 Read % 0.80 cold data % 0.20 total pages touched: 1794294 Mem_X: 13.69
+FINITO HOT COLD - Time taken: 71 seconds - Num Operations: 7500 point query % 0.50 Read % 0.80 cold data % 0.20 total pages touched: 1134459 Mem_X: 8.66
+FINITO HOT COLD - Time taken: 33 seconds - Num Operations: 7500 point query % 0.80 Read % 0.80 cold data % 0.20 total pages touched: 452551 Mem_X: 3.45
+FINITO HOT COLD - Time taken: 154 seconds - Num Operations: 10000 point query % 0.20 Read % 0.80 cold data % 0.20 total pages touched: 2402627 Mem_X: 18.33
+FINITO HOT COLD - Time taken: 137 seconds - Num Operations: 10000 point query % 0.50 Read % 0.80 cold data % 0.20 total pages touched: 1517354 Mem_X: 11.58
+FINITO HOT COLD - Time taken: 43 seconds - Num Operations: 10000 point query % 0.80 Read % 0.80 cold data % 0.20 total pages touched: 601994 Mem_X: 4.59
